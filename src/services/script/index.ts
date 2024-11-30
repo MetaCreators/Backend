@@ -46,16 +46,8 @@ export const generateScript = async (req:any, res:any) => {
       top_p: 0.9,
     });
     console.log(response)
-    //const content = response.choices?.[0]?.text?.trim();
     const rawContent = response.choices?.[0]?.text?.trim() || '';
     const cleanedContent = cleanScript(rawContent);
-
-    // if (!content) {
-    //   res.status(500).json({ message: "Failed to generate script." });
-    //   return;
-    // }
-
-    //res.status(200).json({ message: "Script generated successfully", content });
     if (!cleanedContent) {
       return res.status(500).json({ 
         message: "Failed to generate a meaningful script." 
