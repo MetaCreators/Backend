@@ -1,7 +1,7 @@
 import { RequestHandler } from "express";
 import { Together } from "together-ai";
 require("dotenv").config();
-//console.log(process.env.TOGETHER_AI_API_KEY);
+
 const together = new Together({
   apiKey: process.env.TOGETHER_AI_API_KEY,
 });
@@ -16,21 +16,35 @@ export const generateScript: RequestHandler = async (req, res) => {
 
   try {
     const prompt = `
-        You are a professional scriptwriter. Write a YouTube video script based on these points:
-        ${points.map((point, index) => `${index + 1}. ${point}`).join("\n")}
+      You are a professional scriptwriter. Create an engaging YouTube video script based on the following points:
 
-        The script should include:
-        - An engaging introduction.
-        - Detailed explanations for each point.
-        - A conclusion with a call to action.
-        `;
+      TOPIC POINTS:
+      ${points.map((point, index) => `${index + 1}. ${point}`).join('\n')}
+
+      SCRIPT GUIDELINES:
+      - Develop a compelling narrative around these points
+      - Ensure smooth transitions between ideas
+      - Use an engaging, conversational tone
+      - Include relevant examples or explanations
+      - Structure the script with:
+        a) Strong, attention-grabbing introduction
+        b) Clear exploration of each point
+        c) Memorable conclusion with a call-to-action
+
+      Script Length: Aim for 5-7 minutes of spoken content
+      Target Audience: General YouTube viewers seeking informative content
+
+      BEGIN SCRIPT:
+      `;
 
     const response = await together.completions.create({
       model: "meta-llama/Llama-2-70b-hf",
       prompt,
-      max_tokens: 500,
+      max_tokens: 600,
+      temperature: 0.8,  
+      top_p: 0.9,
     });
-
+    console.log(response)
     const content = response.choices?.[0]?.text?.trim();
 
     if (!content) {
