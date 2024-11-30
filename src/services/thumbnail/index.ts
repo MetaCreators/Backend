@@ -1,7 +1,7 @@
 import Together from "together-ai";
-
+require("dotenv").config();
 const together = new Together({
-  apiKey: "1d5dc7a02154315153d095169ac65a2480d4c913808a641187ceb28ef702e5a2",
+  apiKey: process.env.TOGETHER_AI_API_KEY,
 });
 
 export async function generateImage(userquery: string) {
@@ -15,10 +15,8 @@ export async function generateImage(userquery: string) {
       n: 1,
     });
 
-    // Validate and access the response data
     if (response.data && response.data[0]) {
       const imageUrl = (response.data[0] as any).url;
-      // Use the `url` field
       console.log("Generated Image URL:", imageUrl);
       return imageUrl;
     } else {
