@@ -6,7 +6,7 @@ const together = new Together({
   apiKey: process.env.TOGETHER_AI_API_KEY,
 });
 
-export const generateScript: RequestHandler = async (req, res) => {
+export const generateScript = async (req:any, res:any) => {
   const { points } = req.body;
 
   if (!points || !Array.isArray(points)) {
@@ -15,6 +15,7 @@ export const generateScript: RequestHandler = async (req, res) => {
   }
 
   try {
+    //TODO: improve the prompt to send only text and not any code,video,image etc garbage
     const prompt = `
       You are a professional scriptwriter. Create an engaging YouTube video script based on the following points:
 
@@ -40,19 +41,32 @@ export const generateScript: RequestHandler = async (req, res) => {
     const response = await together.completions.create({
       model: "meta-llama/Llama-2-70b-hf",
       prompt,
-      max_tokens: 600,
+      max_tokens: 1000,
       temperature: 0.8,  
       top_p: 0.9,
     });
     console.log(response)
-    const content = response.choices?.[0]?.text?.trim();
+    //const content = response.choices?.[0]?.text?.trim();
+    const rawContent = response.choices?.[0]?.text?.trim() || '';
+    const cleanedContent = cleanScript(rawContent);
 
-    if (!content) {
-      res.status(500).json({ message: "Failed to generate script." });
-      return;
+    // if (!content) {
+    //   res.status(500).json({ message: "Failed to generate script." });
+    //   return;
+    // }
+
+    //res.status(200).json({ message: "Script generated successfully", content });
+    if (!cleanedContent) {
+      return res.status(500).json({ 
+        message: "Failed to generate a meaningful script." 
+      });
     }
 
-    res.status(200).json({ message: "Script generated successfully", content });
+    res.status(200).json({ 
+      message: "Script generated successfully", 
+      content: cleanedContent 
+    });
+
   } catch (error) {
     if (error instanceof Error) {
       console.error(error.message);
@@ -62,3 +76,42 @@ export const generateScript: RequestHandler = async (req, res) => {
     res.status(500).json({ message: "Error generating content." });
   }
 };
+
+
+function cleanScript(content: string): string {
+  // Remove markdown markers
+  content = content.replace(/\*\*BEGIN SCRIPT\*\*|\*\*END SCRIPT\*\*/g, '');
+
+  // Remove any instruction notes
+  content = content.replace(/Note:.*$/gm, '');
+
+  // Remove extra whitespace and trailing/leading markers
+  content = content.replace(/^\s*```[\s\S]*?```/gm, ''); // Remove code blocks
+  content = content.replace(/^\s*samples:[\s\S]*$/gm, ''); // Remove sample sections
+  content = content.replace(/\s+/g, ' ').trim();
+
+  // Optional: Split into paragraphs if it looks like a single block
+  if (!content.includes('\n')) {
+    content = splitIntoParagraphs(content);
+  }
+
+  return content;
+}
+
+function splitIntoParagraphs(text: string): string {
+  const sentences = text.split('. ');
+  const paragraphs:any[] = [];
+  let currentParagraph = '';
+
+  sentences.forEach((sentence, index) => {
+    currentParagraph += sentence + '. ';
+    
+    // Create a new paragraph every 3-4 sentences
+    if ((index + 1) % 3 === 0 || index === sentences.length - 1) {
+      paragraphs.push(currentParagraph.trim());
+      currentParagraph = '';
+    }
+  });
+
+  return paragraphs.join('\n\n');
+}
