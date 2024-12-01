@@ -1,10 +1,21 @@
-import { RequestHandler } from "express";
-import { Together } from "together-ai";
+import { GoogleGenerativeAI } from "@google/generative-ai"
+
 require("dotenv").config();
 
-const together = new Together({
-  apiKey: process.env.TOGETHER_AI_API_KEY,
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+
+const generationConfig = {
+    temperature: 1,
+    topP: 0.95,
+    topK: 40,
+    maxOutputTokens: 8192,
+}
+
+const model = genAI.getGenerativeModel({
+  model: "gemini-1.5-flash",
+  generationConfig:generationConfig
+})  
+
 
 export const generateDescription = async (req:any, res:any) => {
   const { script } = req.body;
@@ -15,59 +26,76 @@ export const generateDescription = async (req:any, res:any) => {
 
   try {
       const prompt = `
-    TASK: Generate a YouTube Video Description for a Fitness Content Video
+    You are now embodying the persona of a world-class video-description-writer and creative expert specializing in crafting viral, hooking, and highly engaging video descriptions for platforms like YouTube,Instagram. You possess an encyclopedic knowledge of what makes content successful, including strategies for storytelling, pacing, audience retention, and emotional connection. You can adapt your style to any creator’s unique traits while considering their audience and goals.
+    Here are the details provided:
+     - **Script **: ${script}
 
-    SCRIPT OVERVIEW:
-    """
-    ${script}
-    """
+    Requirements for the description:
+      - It should be an attention-grabbing hook aligned with the script.
+      - It should indicate:
+        - Strong hook and clear setup to minimize viewer drop-off.
+        - Quick progression into the core content with intrigue or spectacle.
+        - Build emotional investment with engaging twists, challenges, or stakes.
+        - Maintain audience attention with "wow" moments and a satisfying payoff.
+        - End abruptly with a memorable or cliffhanger conclusion.
+      - Use storytelling techniques like "stair-stepping stakes," surprising twists, and authentic emotional moments.
+      - Ensure simplicity and clarity, suitable for a wide audience while respecting the target audience's characteristics.
 
-    OUTPUT FORMAT (STRICT REQUIREMENTS):
-    ---BEGIN DESCRIPTION---
-    [VIDEO TITLE]
 
-    [PRIMARY DESCRIPTION PARAGRAPH]
+    Output the script in the following markdown structure:
 
-    [KEY INSIGHTS/BULLET POINTS]
-    - Insight 1
-    - Insight 2
-    - Insight 3
+        \`\`\`markdown
+        # Video description for [Video script]
+        ---
 
-    [CALL TO ACTION PARAGRAPH]
+        ## **Introduction**
+        [Start with the hook and setup here.]
 
-    [RELEVANT HASHTAGS]
-    ---END DESCRIPTION---
+        ---
 
-    SPECIFIC GUIDELINES:
-    - Total length: 200-300 words
-    - Use an engaging, conversational tone
-    - Focus on the core messages from the script
-    - Include 3-5 SEO-friendly keywords naturally
-    - Aim to motivate and provide value to viewers
-    - Ensure clear, structured format for easy parsing
+        ## **Core Content**
+        [Progress into the story while maintaining interest and meeting script expectations.]
+
+        ---
+
+        ## **Midpoint Engagement**
+        [Introduce stakes, twists, or emotional moments to deepen audience involvement.]
+
+        ---
+
+        ## **Climax and Conclusion**
+        [Showcase the payoff, include a "wow" moment, and conclude with an abrupt ending.]
+
+        ---
+
+        ## **Call-to-Action (if applicable)**
+        [Optional interactive element or audience engagement prompt.]
+
+        ---
+
+        ## **Relevant Hashtags**
+        \`\`\`
+
+      SPECIFIC GUIDELINES:
+      - Total length: 200-300 words
+      - Use an engaging, conversational tone
+      - Focus on the core messages from the script
+      - Include 3-5 SEO-friendly keywords naturally
+      - Aim to motivate and provide value to viewers
+      - Ensure clear, structured format for easy parsing
+
+        Now, generate a highly engaging video script based on these inputs.
     `;
 
-    const response = await together.completions.create({
-      model: "meta-llama/Llama-2-70b-hf",
-      prompt: prompt,
-      max_tokens: 500,
-      temperature: 0.7,
-      top_p: 0.9,
-    });
+    const response = await model.generateContent(prompt);
     console.log(response);
 
-    const rawDescription = response.choices?.[0]?.text?.trim() || '';
-    const cleanedDescription = cleanDescription(rawDescription);
-
-    if (!cleanedDescription) {
-      return res.status(500).json({ 
-        message: "Failed to generate a meaningful description." 
-      });
-    }
+    const candidates = response?.response?.candidates ?? [];
+    const text = candidates[0]?.content?.parts?.[0]?.text ?? "No script generated";
 
     res.status(200).json({
       message: "YouTube description generated successfully.",
-      description: cleanedDescription,
+      description: text,
     });
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);
@@ -79,28 +107,4 @@ export const generateDescription = async (req:any, res:any) => {
 };
 
 
-function cleanDescription(content: string): string {
-  content = content.replace(/```[\s\S]*?```/g, '');
-  content = content.replace(/Note:.*$/gm, '');
-  content = content.replace(/\s+/g, ' ').trim();
-  if (!content.includes('\n')) {
-    content = splitIntoParagraphs(content);
-  }
-  return content;
-}
 
-function splitIntoParagraphs(text: string): string {
-  const sentences = text.split('. ');
-  const paragraphs:any[] = [];
-  let currentParagraph = '';
-
-  sentences.forEach((sentence, index) => {
-    currentParagraph += sentence + '. ';
-    if ((index + 1) % 3 === 0 || index === sentences.length - 1) {
-      paragraphs.push(currentParagraph.trim());
-      currentParagraph = '';
-    }
-  });
-
-  return paragraphs.join('\n\n');
-}
