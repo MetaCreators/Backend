@@ -90,11 +90,6 @@ export const generateScript = async (req:any, res:any) => {
         Now, generate a highly engaging video script based on these inputs.
     `;
 
-    // const result: GenerateContentResult = await model.generateContent({
-    //   prompt,
-    //   generationConfig,
-    // })
-
     const response = await model.generateContent(prompt);
 
     console.log(response)
