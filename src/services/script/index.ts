@@ -1,62 +1,109 @@
-import { RequestHandler } from "express";
-import { Together } from "together-ai";
+import { GoogleGenerativeAI, GenerateContentResult } from "@google/generative-ai"
+
+
 require("dotenv").config();
 
-const together = new Together({
-  apiKey: process.env.TOGETHER_AI_API_KEY,
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+
+const generationConfig = {
+    temperature: 1,
+    topP: 0.95,
+    topK: 40,
+    maxOutputTokens: 8192,
+}
+
+const model = genAI.getGenerativeModel({
+  model: "gemini-1.5-flash",
+  generationConfig:generationConfig
+})  
+
+
 
 export const generateScript = async (req:any, res:any) => {
-  const { points } = req.body;
+  const { points, length, style, targetAudience } = req.body;
 
-  if (!points || !Array.isArray(points)) {
+  if (!points || !Array.isArray(points) || !length || !style || !targetAudience) {
     res.status(400).json({ message: "Please provide some points." });
     return;
   }
 
+  const formattedPoints = points.map((point, index) => `${index + 1}. ${point}`).join("\n");
+
   try {
     //TODO: improve the prompt to send only text and not any code,video,image etc garbage
-    const prompt = `
-      You are a professional scriptwriter. Create an engaging YouTube video script based on the following points:
+    //TODO: add a markdown parser in frontend
+      const prompt = `
+        You are now embodying the persona of a world-class scriptwriter and creative expert specializing in crafting viral, hooking, and highly engaging video scripts for platforms like YouTube. You possess an encyclopedic knowledge of what makes content successful, including strategies for storytelling, pacing, audience retention, and emotional connection. You can adapt your style to any creator’s unique traits while considering their audience and goals.
 
-      TOPIC POINTS:
-      ${points.map((point, index) => `${index + 1}. ${point}`).join('\n')}
+        Here are the details provided:
+        - **Script Length**: ${length}
+        - **Topic Idea**: 
+        ${formattedPoints}
+        - **Unique Style/Voice**: ${style}
+        - **Target Audience**: ${targetAudience}
 
-      SCRIPT GUIDELINES:
-      - Develop a compelling narrative around these points
-      - Ensure smooth transitions between ideas
-      - Use an engaging, conversational tone
-      - Include relevant examples or explanations
-      - Structure the script with:
-        a) Strong, attention-grabbing introduction
-        b) Clear exploration of each point
-        c) Memorable conclusion with a call-to-action
+        Requirements for the script:
+        - Start with an attention-grabbing hook aligned with the topic ideas.
+        - Include structured pacing:
+          - First minute: Strong hook and clear setup to minimize viewer drop-off.
+          - Minute 1-3: Quick progression into the core content with intrigue or spectacle.
+          - Minute 3-6: Build emotional investment with engaging twists, challenges, or stakes.
+          - Back half: Maintain audience attention with "wow" moments and a satisfying payoff.
+          - End abruptly with a memorable or cliffhanger conclusion.
+        - Use storytelling techniques like "stair-stepping stakes," surprising twists, and authentic emotional moments.
+        - Ensure simplicity and clarity, suitable for a wide audience while respecting the target audience's characteristics.
 
-      Script Length: Aim for 5-7 minutes of spoken content
-      Target Audience: General YouTube viewers seeking informative content
+        Output the script in the following markdown structure:
 
-      BEGIN SCRIPT:
-      `;
+        \`\`\`markdown
+        # Video Script for [Video Topic]
+        **Length:** ${length}
+        **Style:** ${style}
+        **Audience:** ${targetAudience}
 
-    const response = await together.completions.create({
-      model: "meta-llama/Llama-2-70b-hf",
-      prompt,
-      max_tokens: 1000,
-      temperature: 0.8,  
-      top_p: 0.9,
-    });
+        ---
+
+        ## **Introduction (First 1 Minute)**
+        [Start with the hook and setup here.]
+
+        ---
+
+        ## **Core Content (Minutes 1-3)**
+        [Progress into the story while maintaining interest and meeting thumbnail/title expectations.]
+
+        ---
+
+        ## **Midpoint Engagement (Minutes 3-6)**
+        [Introduce stakes, twists, or emotional moments to deepen audience involvement.]
+
+        ---
+
+        ## **Climax and Conclusion (Back Half)**
+        [Showcase the payoff, include a "wow" moment, and conclude with an abrupt ending.]
+
+        ---
+
+        ## **Call-to-Action (if applicable)**
+        [Optional interactive element or audience engagement prompt.]
+        \`\`\`
+
+        Now, generate a highly engaging video script based on these inputs.
+    `;
+
+    // const result: GenerateContentResult = await model.generateContent({
+    //   prompt,
+    //   generationConfig,
+    // })
+
+    const response = await model.generateContent(prompt);
+
     console.log(response)
-    const rawContent = response.choices?.[0]?.text?.trim() || '';
-    const cleanedContent = cleanScript(rawContent);
-    if (!cleanedContent) {
-      return res.status(500).json({ 
-        message: "Failed to generate a meaningful script." 
-      });
-    }
+    const candidates = response?.response?.candidates ?? [];
+    const text = candidates[0]?.content?.parts?.[0]?.text ?? "No script generated";
 
-    res.status(200).json({ 
-      message: "Script generated successfully", 
-      content: cleanedContent 
+    res.status(200).json({
+      message: "Script generated successfully",
+      content: text,
     });
 
   } catch (error) {
@@ -68,42 +115,3 @@ export const generateScript = async (req:any, res:any) => {
     res.status(500).json({ message: "Error generating content." });
   }
 };
-
-
-function cleanScript(content: string): string {
-  // Remove markdown markers
-  content = content.replace(/\*\*BEGIN SCRIPT\*\*|\*\*END SCRIPT\*\*/g, '');
-
-  // Remove any instruction notes
-  content = content.replace(/Note:.*$/gm, '');
-
-  // Remove extra whitespace and trailing/leading markers
-  content = content.replace(/^\s*```[\s\S]*?```/gm, ''); // Remove code blocks
-  content = content.replace(/^\s*samples:[\s\S]*$/gm, ''); // Remove sample sections
-  content = content.replace(/\s+/g, ' ').trim();
-
-  // Optional: Split into paragraphs if it looks like a single block
-  if (!content.includes('\n')) {
-    content = splitIntoParagraphs(content);
-  }
-
-  return content;
-}
-
-function splitIntoParagraphs(text: string): string {
-  const sentences = text.split('. ');
-  const paragraphs:any[] = [];
-  let currentParagraph = '';
-
-  sentences.forEach((sentence, index) => {
-    currentParagraph += sentence + '. ';
-    
-    // Create a new paragraph every 3-4 sentences
-    if ((index + 1) % 3 === 0 || index === sentences.length - 1) {
-      paragraphs.push(currentParagraph.trim());
-      currentParagraph = '';
-    }
-  });
-
-  return paragraphs.join('\n\n');
-}
