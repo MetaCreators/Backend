@@ -16,7 +16,7 @@ app.get("/", (req: Request, res: Response) => {
 app.use("/api", apiRoutes);
 
 app.post("/thumbnail", async (req: any, res: any) => {
-  const userIdea = req.body.userIdea;
+  const {userIdea,userStyle,targetAudience } = req.body;
   console.log(userIdea);
   if (!userIdea) {
     return res.status(400).json({
@@ -25,7 +25,7 @@ app.post("/thumbnail", async (req: any, res: any) => {
     });
   }
 
-  const result = await generateImage(userIdea);
+  const result = await generateImage(userIdea,userStyle,targetAudience);
   const images = Array.isArray(result) ? result : [result];
   // TODO: AI logic here: Respond with 3 image URLs
 

@@ -3,17 +3,71 @@ require("dotenv").config();
 const together = new Together({
   apiKey: process.env.TOGETHER_AI_API_KEY,
 });
+import { GoogleGenerativeAI } from "@google/generative-ai"
 
-export async function generateImage(userquery: string) {
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const generationConfig = {
+    temperature: 1,
+    topP: 0.95,
+    topK: 40,
+    maxOutputTokens: 8192,
+}
+
+const model = genAI.getGenerativeModel({
+  model: "gemini-1.5-flash",
+  generationConfig:generationConfig
+})  
+
+export async function generateImage(userquery: string,userStyle:string,targetAudience:string) {
+
+const geminiPrompt = `
+    You are now embodying the persona of a **world-class creative writer and storyteller** specializing in transforming simple video ideas into short but rich, vivid, and fully fleshed-out concepts. Your expertise lies in understanding the nuances of a video idea, amplifying its core message, and presenting it in a compelling, crisp narrative that resonates with the intended audience.
+
+    ### Input Details:
+    - **Video Idea (User Query)**: ${userquery}
+    - **User Style**: ${userStyle}
+    - **Target Audience**: ${targetAudience}
+
+    ### Your Task:
+    Elaborate on the video idea provided by the user. Expand it into a crisp but imaginative description that captures the essence of the concept while aligning with the user’s style,video idea and Target Audience.
+
+    ### Requirements for the Output:
+    1. **Crisp Elaboration**:
+      - Provide a clear picture of what the video could look and feel like.
+
+    2. **Style Alignment**:
+      - Use language and tone that reflect the user’s specified style (e.g., dramatic, humorous, inspiring, or casual).
+      - Ensure the writing feels authentic and aligned with the creator’s voice.
+
+    3. **Audience Relevance**:
+      - Tailor the description to appeal to the specified audience.  
+      - Consider their interests, age group, and preferences to craft an idea they would find exciting and relatable.
+
+    4. **Creativity and Engagement**:
+      - Use evocative language to inspire curiosity and excitement.
+
+    ### Specific Guidelines:
+    - Write in a natural and engaging tone.
+    - Provide a vivid mental picture of what the video entails.
+    - Use language that aligns with the user’s creative goals and audience interests.
+    - Ensure the description is actionable and ready to guide further creative development.
+
+    Now, expand on the provided video idea. Strictly add a line for "add so and so text in the image" when the user asks to do so, in the video description
+    `;
 
 
+  const response = await model.generateContent(geminiPrompt);
+  const candidates = response?.response?.candidates ?? [];
+  const refinedPrompt = candidates[0]?.content?.parts?.[0]?.text ?? "No refinedPrompt generated";
+  console.log(refinedPrompt)
 
 
   const prompt = `
     You are now embodying the persona of a **world-class thumbnail designer and creative expert** specializing in creating **viral, engaging, and high-impact video thumbnails** for platforms like **YouTube and Instagram**.You generate State of the Art images. Your expertise includes **emotional engagement**, **visual storytelling**, **audience psychology**, and **attention-grabbing design strategies**. Your goal is to design a thumbnail concept that maximizes clicks, builds curiosity, and resonates with the intended audience.
 
     ### Thumbnail Details:
-    - **Thumbnail Idea**: ${userquery}
+    - **Thumbnail Idea**: ${refinedPrompt}
 
     ### Thumbnail Design Requirements:
     1. **Visual Impact**:
@@ -45,7 +99,7 @@ export async function generateImage(userquery: string) {
     - **Build Curiosity**: The thumbnail must intrigue the viewer and entice them to click, aligning with audience expectations.
     - **“Wow Factor”**: Include at least one standout visual or concept that makes the thumbnail feel unique and impactful.
 
-    Now, generate the **thumbnail** based on the provided thumbnail idea.
+    Now, generate the **thumbnail** based on the provided thumbnail idea. Strictly add SEO optimized texts when the user asks to do so, in the image
     `;
 
   
