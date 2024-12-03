@@ -19,6 +19,10 @@ const model = genAI.getGenerativeModel({
   generationConfig:generationConfig
 })  
 
+//TODO: How to personalize the images?
+//checkout:
+//Audio: eleven labs
+//Video: synthesia and hygen
 export async function generateImage(userquery: string,userStyle:string,targetAudience:string) {
 
 const geminiPrompt = `
