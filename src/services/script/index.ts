@@ -1,38 +1,62 @@
-import { GoogleGenerativeAI } from "@google/generative-ai"
-
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Request, Response } from "express";
+import { supabase } from "../../lib/supabase";
 
 require("dotenv").config();
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 const generationConfig = {
-    temperature: 1,
-    topP: 0.95,
-    topK: 40,
-    maxOutputTokens: 8192,
-}
+  temperature: 1,
+  topP: 0.95,
+  topK: 40,
+  maxOutputTokens: 8192,
+};
 
 const model = genAI.getGenerativeModel({
   model: "gemini-1.5-flash",
-  generationConfig:generationConfig
-})  
+  generationConfig: generationConfig,
+});
 
-
-
-export const generateScript = async (req:any, res:any) => {
-  const { points, length, style, targetAudience } = req.body;
-
-  if (!points || !Array.isArray(points) || !length || !style || !targetAudience) {
-    res.status(400).json({ message: "Please provide some points." });
-    return;
-  }
-
-  const formattedPoints = points.map((point, index) => `${index + 1}. ${point}`).join("\n");
-
+export const generateScript = async (req: Request, res: Response) => {
   try {
+    const token = req.headers.authorization?.split("Bearer ")[1];
+
+    if (!token) {
+      res.status(401).json({ message: "No authentication token provided" });
+      return;
+    }
+
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
+      res.status(401).json({ message: "Invalid authentication token" });
+      return;
+    }
+
+    const { points, length, style, targetAudience } = req.body;
+
+    if (
+      !points ||
+      !Array.isArray(points) ||
+      !length ||
+      !style ||
+      !targetAudience
+    ) {
+      res.status(400).json({ message: "Please provide some points." });
+      return;
+    }
+
+    const formattedPoints = points
+      .map((point, index) => `${index + 1}. ${point}`)
+      .join("\n");
+
     //TODO: improve the prompt to send only text and not any code,video,image etc garbage
     //TODO: add a markdown parser in frontend
-      const prompt = `
+    const prompt = `
         You are now embodying the persona of a world-class scriptwriter and creative expert specializing in crafting viral, hooking, and highly engaging video scripts for platforms like YouTube. You possess an encyclopedic knowledge of what makes content successful, including strategies for storytelling, pacing, audience retention, and emotional connection. You can adapt your style to any creator’s unique traits while considering their audience and goals.
 
         Here are the details provided:
@@ -92,15 +116,15 @@ export const generateScript = async (req:any, res:any) => {
 
     const response = await model.generateContent(prompt);
 
-    console.log(response)
+    console.log(response);
     const candidates = response?.response?.candidates ?? [];
-    const text = candidates[0]?.content?.parts?.[0]?.text ?? "No script generated";
+    const text =
+      candidates[0]?.content?.parts?.[0]?.text ?? "No script generated";
 
     res.status(200).json({
       message: "Script generated successfully",
       content: text,
     });
-
   } catch (error) {
     if (error instanceof Error) {
       console.error(error.message);

@@ -2,13 +2,14 @@ import { Router } from "express";
 //import { generateImage } from "../services/thumbnail";
 import { generateScript } from "../services/script";
 import { generateDescription } from "../services/description";
+import { authMiddleware } from "../middleware/auth";
 
 const router = Router();
 
 //router.post("/thumbnail", generateImage);
 
-router.post("/script", generateScript);
+router.post("/script", authMiddleware, generateScript);
 
-router.post("/description", generateDescription);
+router.post("/description", authMiddleware, generateDescription);
 
 export default router;

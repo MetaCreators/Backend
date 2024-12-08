@@ -3,25 +3,27 @@ require("dotenv").config();
 const together = new Together({
   apiKey: process.env.TOGETHER_AI_API_KEY,
 });
-import { GoogleGenerativeAI } from "@google/generative-ai"
-
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 const generationConfig = {
-    temperature: 1,
-    topP: 0.95,
-    topK: 40,
-    maxOutputTokens: 8192,
-}
+  temperature: 1,
+  topP: 0.95,
+  topK: 40,
+  maxOutputTokens: 8192,
+};
 
 const model = genAI.getGenerativeModel({
   model: "gemini-1.5-flash",
-  generationConfig:generationConfig
-})  
+  generationConfig: generationConfig,
+});
 
-export async function generateImage(userquery: string,userStyle:string,targetAudience:string) {
-
-const geminiPrompt = `
+export async function generateImage(
+  userquery: string,
+  userStyle: string,
+  targetAudience: string
+) {
+  const geminiPrompt = `
     You are now embodying the persona of a **world-class creative writer and storyteller** specializing in transforming simple video ideas into short but rich, vivid, and fully fleshed-out concepts. Your expertise lies in understanding the nuances of a video idea, amplifying its core message, and presenting it in a compelling, crisp narrative that resonates with the intended audience.
 
     ### Input Details:
@@ -56,12 +58,11 @@ const geminiPrompt = `
     Now, expand on the provided video idea. Strictly add a line for "add so and so text in the image" when the user asks to do so, in the video description
     `;
 
-
   const response = await model.generateContent(geminiPrompt);
   const candidates = response?.response?.candidates ?? [];
-  const refinedPrompt = candidates[0]?.content?.parts?.[0]?.text ?? "No refinedPrompt generated";
-  console.log(refinedPrompt)
-
+  const refinedPrompt =
+    candidates[0]?.content?.parts?.[0]?.text ?? "No refinedPrompt generated";
+  console.log(refinedPrompt);
 
   const prompt = `
     You are now embodying the persona of a **world-class thumbnail designer and creative expert** specializing in creating **viral, engaging, and high-impact video thumbnails** for platforms like **YouTube and Instagram**.You generate State of the Art images. Your expertise includes **emotional engagement**, **visual storytelling**, **audience psychology**, and **attention-grabbing design strategies**. Your goal is to design a thumbnail concept that maximizes clicks, builds curiosity, and resonates with the intended audience.
@@ -102,7 +103,6 @@ const geminiPrompt = `
     Now, generate the **thumbnail** based on the provided thumbnail idea. Strictly add SEO optimized texts when the user asks to do so, in the image
     `;
 
-  
   try {
     const response = await together.images.create({
       model: "black-forest-labs/FLUX.1-schnell-Free",
