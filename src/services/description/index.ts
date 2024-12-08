@@ -1,31 +1,50 @@
-import { GoogleGenerativeAI } from "@google/generative-ai"
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { supabase } from "../../lib/supabase";
+import { Request, Response } from "express";
 
 require("dotenv").config();
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 const generationConfig = {
-    temperature: 1,
-    topP: 0.95,
-    topK: 40,
-    maxOutputTokens: 8192,
-}
+  temperature: 1,
+  topP: 0.95,
+  topK: 40,
+  maxOutputTokens: 8192,
+};
 
 const model = genAI.getGenerativeModel({
   model: "gemini-1.5-flash",
-  generationConfig:generationConfig
-})  
+  generationConfig: generationConfig,
+});
 
-
-export const generateDescription = async (req:any, res:any) => {
-  const { script } = req.body;
-
-  if (!script || typeof script !== "string" || script.trim().length < 50) {
-    return res.status(400).json({ message: "Please provide a valid script." });
-  }
-
+export const generateDescription = async (req: Request, res: Response) => {
   try {
-      const prompt = `
+    const token = req.headers.authorization?.split("Bearer ")[1];
+
+    if (!token) {
+      res.status(401).json({ message: "No authentication token provided" });
+      return;
+    }
+
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
+      res.status(401).json({ message: "Invalid authentication token" });
+      return;
+    }
+
+    const { script } = req.body;
+
+    if (!script || typeof script !== "string" || script.trim().length < 50) {
+      res.status(400).json({ message: "Please provide a valid script." });
+      return;
+    }
+
+    const prompt = `
     You are now embodying the persona of a world-class video-description-writer and creative expert specializing in crafting viral, hooking, and highly engaging video descriptions for platforms like YouTube,Instagram. You possess an encyclopedic knowledge of what makes content successful, including strategies for storytelling, pacing, audience retention, and emotional connection. You can adapt your style to any creator’s unique traits while considering their audience and goals.
     Here are the details provided:
      - **Script **: ${script}
@@ -91,7 +110,8 @@ export const generateDescription = async (req:any, res:any) => {
     console.log(response);
 
     const candidates = response?.response?.candidates ?? [];
-    const text = candidates[0]?.content?.parts?.[0]?.text ?? "No script generated";
+    const text =
+      candidates[0]?.content?.parts?.[0]?.text ?? "No script generated";
 
     res.status(200).json({
       message: "YouTube description generated successfully.",
@@ -105,6 +125,3 @@ export const generateDescription = async (req:any, res:any) => {
     });
   }
 };
-
-
-

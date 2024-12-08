@@ -1,7 +1,9 @@
-import express, { Application, Request, Response } from "express";
+import express, { Application, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import { generateImage } from "./services/thumbnail";
 import apiRoutes from "./routes/apiRoutes";
+import { authMiddleware } from "./middleware/auth";
+import { supabase } from "./lib/supabase";
 
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
@@ -13,27 +15,61 @@ app.get("/", (req: Request, res: Response) => {
   res.send("Hello, TypeScript with Expresssss!");
 });
 
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error(err.stack);
+  res.status(500).json({ error: "Something broke!" });
+});
+
 app.use("/api", apiRoutes);
 
-app.post("/thumbnail", async (req: any, res: any) => {
-  const {userIdea,userStyle,targetAudience } = req.body;
-  console.log(userIdea);
-  if (!userIdea) {
-    return res.status(400).json({
+app.post("/thumbnail", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const token = req.headers.authorization?.split("Bearer ")[1];
+
+    if (!token) {
+      res.status(401).json({ message: "No authentication token provided" });
+      return;
+    }
+
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
+      res
+        .status(401)
+        .json({ success: false, message: "Invalid authentication token" });
+      return;
+    }
+
+    const { userIdea, userStyle, targetAudience } = req.body;
+    console.log(userIdea);
+    if (!userIdea) {
+      res.status(400).json({
+        success: false,
+        message: 'Please provide a search term in the "userIdea" field.',
+      });
+      return;
+    }
+
+    const result = await generateImage(userIdea, userStyle, targetAudience);
+    const images = Array.isArray(result) ? result : [result];
+    // TODO: AI logic here: Respond with 3 image URLs
+
+    res.json({
+      success: true,
+      searchTerm: userIdea,
+      images,
+    });
+  } catch (error) {
+    console.error("Thumbnail generation error: ", error);
+    res.status(500).json({
       success: false,
-      message: 'Please provide a search term in the "userIdea" field.',
+      message: "An error during thumbnail generation",
+      error: error instanceof Error ? error.message : error,
     });
   }
-
-  const result = await generateImage(userIdea,userStyle,targetAudience);
-  const images = Array.isArray(result) ? result : [result];
-  // TODO: AI logic here: Respond with 3 image URLs
-
-  res.json({
-    success: true,
-    searchTerm: userIdea,
-    images,
-  });
 });
 
 app.listen(PORT, () => {
