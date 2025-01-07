@@ -3,6 +3,7 @@ import { Router } from "express";
 import { generateScript } from "../services/script";
 import { generateDescription } from "../services/description";
 import { authMiddleware } from "../middleware/auth";
+import { finetune } from "../services/thumbnail/finetune";
 
 const router = Router();
 
@@ -11,5 +12,7 @@ const router = Router();
 router.post("/script", authMiddleware, generateScript);
 
 router.post("/description", authMiddleware, generateDescription);
+
+router.post("/imagefinetune", authMiddleware, finetune);
 
 export default router;
