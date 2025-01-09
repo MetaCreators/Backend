@@ -83,6 +83,7 @@ app.post("/thumbnail", authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
+//TODO:abstract out properly => put the code in respective folders
 app.post("/api/imagefinetune",async (req, res) => {
   const { userid } = req.body;
   
