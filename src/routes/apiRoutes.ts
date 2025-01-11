@@ -14,7 +14,9 @@ router.post("/script", authMiddleware, generateScript);
 
 router.post("/description", authMiddleware, generateDescription);
 
-router.post("/imagefinetune", authMiddleware, finetune);
+//router.post("/imagefinetune", authMiddleware, finetune);
+//TODO: Add middleware after testing
+//router.post("/imagefinetune" ,finetune);
 
 router.post("/genpersonimage", authMiddleware, genpersonimage);
 

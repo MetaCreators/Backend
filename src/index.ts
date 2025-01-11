@@ -4,6 +4,17 @@ import { generateImage } from "./services/thumbnail";
 import apiRoutes from "./routes/apiRoutes";
 import { authMiddleware } from "./middleware/auth";
 import { supabase } from "./lib/supabase";
+import { createClient } from "redis";
+
+const client = createClient();    
+
+try {
+    client.connect();
+    console.log("connected to redis");
+} catch (error) {
+    console.log("error connecting to redis",error)
+}
+
 
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
@@ -12,7 +23,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/", (req: Request, res: Response) => {
-  res.send("Hello, TypeScript with Expresssss!");
+  res.send("Hello, TypeScript with Express!");
 });
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
@@ -70,6 +81,22 @@ app.post("/thumbnail", authMiddleware, async (req: Request, res: Response) => {
       error: error instanceof Error ? error.message : error,
     });
   }
+});
+
+//TODO:abstract out properly => put the code in respective folders
+app.post("/api/imagefinetune",async (req, res) => {
+  const { userid } = req.body;
+  
+  try {
+    await client.lPush("training", JSON.stringify({ userid: userid }));
+    res.json({message:`training received for userid ${userid}`}) 
+  } catch (error) {
+    res.json({
+      message:"training input failed",
+      error:error
+    })
+  }
+    
 });
 
 app.listen(PORT, () => {
