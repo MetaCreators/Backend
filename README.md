@@ -51,3 +51,8 @@ docker run -p 3000:3000 \
   lithouse_backend
 
 ```
+
+building the image:
+```
+docker build -t lithouse_backend .
+```
