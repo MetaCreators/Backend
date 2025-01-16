@@ -37,3 +37,17 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 **Note:** Prefix Vite environment variables with `VITE_`
 - run the project using npm run dev
+
+#### 5. Docker commands
+
+starting the backend image on docker:
+```
+docker run -p 3000:3000 \
+  -e REPLICATE_API_TOKEN="" \
+  -e TOGETHER_API_KEY="" \
+  -e GEMINI_API_KEY="" \
+  -e VITE_SUPABASE_URL="" \
+  -e VITE_SUPABASE_ANON_KEY="" \
+  lithouse_backend
+
+```
