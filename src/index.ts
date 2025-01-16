@@ -6,7 +6,9 @@ import { authMiddleware } from "./middleware/auth";
 import { supabase } from "./lib/supabase";
 import { createClient } from "redis";
 
-const client = createClient();    
+const client = createClient({
+    url: process.env.REDIS_URL
+});    
 
 try {
     client.connect();
