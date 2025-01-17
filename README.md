@@ -37,3 +37,28 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 **Note:** Prefix Vite environment variables with `VITE_`
 - run the project using npm run dev
+
+#### 5. Docker commands
+
+creating a network:
+```
+docker network create backend_redis_worker_network
+```
+start the redis container:
+```
+docker run --name lithouse-redis --network backend_redis_worker_network -d -p 6379:6379 redis 
+```
+
+If the lithouse-redis container is not on the backend_redis_worker_network, you can manually connect it:
+```
+docker network connect backend_redis_worker_network lithouse-redis
+```
+starting the backend image on docker on the network backend_redis_worker_network:
+```
+docker run -d --network backend_redis_worker_network -p 3000:3000 -e REPLICATE_API_TOKEN="" -e TOGETHER_API_KEY="" -e GEMINI_API_KEY="" -e VITE_SUPABASE_URL="" -e VITE_SUPABASE_ANON_KEY="" -e REDIS_URL="redis://lithouse-redis:6379" lithouse_backend 
+```
+
+building the image:
+```
+docker build -t lithouse_backend .
+```

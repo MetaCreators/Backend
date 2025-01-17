@@ -1,7 +1,9 @@
 import Replicate from "replicate";
 import { createClient } from "redis";
 
-const client = createClient();
+const client = createClient({
+    url: process.env.REDIS_URL
+});
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,

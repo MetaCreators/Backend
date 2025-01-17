@@ -1,0 +1,32 @@
+version: "1"
+services:
+  lithouse-redis:
+    image: "redis"
+    container_name: lithouse-redis-compose
+    ports:
+      - 6379:6379
+  lithouse_backend:
+    image: "lithouse_backend"
+    container_name: lithouse_backend_container_compose
+    depends_on:
+      - lithouse-redis
+    ports:
+      - 3000:3000
+    environment:
+      REPLICATE_API_TOKEN: "${REPLICATE_API_TOKEN}"
+      TOGETHER_API_KEY: "${TOGETHER_API_KEY}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY}"
+      VITE_SUPABASE_URL: "${VITE_SUPABASE_URL}"
+      VITE_SUPABASE_ANON_KEY: "${VITE_SUPABASE_ANON_KEY}"
+      REDIS_URL: "${REDIS_URL}"
+  lithouse_worker:
+    image: "lithouse_worker"
+    container_name: lithouse_worker_container_compose
+    depends_on:
+      - lithouse-redis
+    environment:
+      REPLICATE_API_TOKEN: "${REPLICATE_API_TOKEN}"
+      SMTP_USERNAME: "${SMTP_USERNAME}"
+      SMTP_PASSWORD: "${SMTP_PASSWORD}"
+      SMTP_ENDPOINT: "${SMTP_ENDPOINT}"
+      REDIS_URL: "${REDIS_URL}"
