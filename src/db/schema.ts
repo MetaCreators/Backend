@@ -29,3 +29,5 @@ export const userQueries = pgTable('userQueries', {
     userId: uuid("userId").references(()=>UserTable.id).notNull(),
     genImgId:uuid("imageId").references(()=>generatedImages.id).notNull()
 })
+
+//there's surely a bug here, in the schema and relations
