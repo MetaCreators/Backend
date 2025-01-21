@@ -12,7 +12,7 @@ export const UserTable = pgTable('users', {
 export const generatedImages = pgTable('generatedImages', {
     id: uuid("id").primaryKey().defaultRandom(),
     imageId:varchar("imageId").unique(),
-    modelId:varchar("modelId"),
+    modelId:uuid("modelId").references(()=>modelDetails.id).notNull(),
     userId:uuid("userId").references(()=>UserTable.id).notNull()
 })
 
@@ -24,8 +24,8 @@ export const modelDetails = pgTable('modelDetails', {
 
 export const userQueries = pgTable('userQueries', {
     id: uuid("id").primaryKey().defaultRandom(),  
-    modelId: varchar("modelId"),
+    modelId: uuid("modelId").references(()=>modelDetails.id).notNull(),
     query: varchar("query"),
     userId: uuid("userId").references(()=>UserTable.id).notNull(),
-    genImgId:varchar("imageId").unique()
+    genImgId:uuid("imageId").references(()=>generatedImages.id).notNull()
 })
