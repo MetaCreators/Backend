@@ -26,9 +26,7 @@ async function DeleteTable() {
     //delete complete table :
     await db.delete(UserTable);
 }
-
 //DeleteTable();
-
 
 async function getUserImages() {
     const user = await db.query.UserTable.findMany({
@@ -43,7 +41,6 @@ async function getUserImages() {
     })
     console.log(user);
 }
-
 //getUserImages()
 
 async function updateUserName() {
@@ -55,3 +52,15 @@ async function updateUserName() {
     console.log(allusers)
 }
 updateUserName()
+
+//db functions to add:
+
+// create new user upon signup
+// add credits to user when he pays
+// deduct credit when he generates image
+// store user sent training images to cloud (get cloud url)
+// store generated image (both replicate and cloud url)
+// get user credits
+// get user images
+// get user models
+//add user model
