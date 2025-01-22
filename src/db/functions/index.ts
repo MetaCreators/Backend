@@ -2,7 +2,9 @@ import { eq } from "drizzle-orm";
 import { db } from "../db";
 import { trainingImages, UserTable } from "../schema";
 import "dotenv/config"
-async function InsertUser() {
+
+// create new user upon signup
+async function createNewUser() {
     //insert a value in some table:
     await db.insert(UserTable).values({
         name: "yash",
@@ -12,9 +14,10 @@ async function InsertUser() {
     const user = await db.query.UserTable.findFirst()
     console.log(user)
 }
-//InsertUser()
+//createNewUser()
 
-async function InsertTrainingImage() {
+// store user sent training images to cloud (get cloud url)
+async function createNewTrainingImage() {
     await db.insert(trainingImages).values({
         status: "success",
         userId: "35c81749-b2aa-4a50-a55f-f86f3cb2c64e",
@@ -22,12 +25,21 @@ async function InsertTrainingImage() {
 }
 //InsertTrainingImage()
 
-async function DeleteTable() {
-    //delete complete table :
-    await db.delete(UserTable);
+//store user's new model on training complete
+async function createNewUserModel() {
+    
 }
-//DeleteTable();
 
+// get user models
+async function getUserModels() {
+    
+}
+
+//store user's new generated Image
+async function storeGeneratedImage() {
+    
+}
+// get user images
 async function getUserImages() {
     const user = await db.query.UserTable.findMany({
         columns: { email: true,id:true },
@@ -43,6 +55,26 @@ async function getUserImages() {
 }
 //getUserImages()
 
+// add credits to user when he pays
+async function addUserCredits() {
+    
+}
+
+// deduct credit when he generates image
+async function deductUserCredits() {
+    
+}
+
+// store generated image (both replicate and cloud url)
+
+// get user credits
+async function getUserCredits() {
+    
+}
+
+//EXTRA FUNCTIONS:
+
+//update username/details
 async function updateUserName() {
     const user = await db.update(UserTable).set({
         name:"newName"
@@ -51,16 +83,10 @@ async function updateUserName() {
     const allusers = await db.select().from(UserTable)
     console.log(allusers)
 }
-updateUserName()
+//updateUserName()
 
-//db functions to add:
-
-// create new user upon signup
-// add credits to user when he pays
-// deduct credit when he generates image
-// store user sent training images to cloud (get cloud url)
-// store generated image (both replicate and cloud url)
-// get user credits
-// get user images
-// get user models
-//add user model
+async function DeleteTable() {
+    //delete complete table :
+    await db.delete(UserTable);
+}
+//DeleteTable();
