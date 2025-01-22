@@ -1,3 +1,4 @@
+import { relations } from "drizzle-orm";
 import { integer, pgEnum, pgTable, text, timestamp, unique, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 
 export const StatusEnum = pgEnum("status", ["pending", "success", "failed"]);
@@ -52,7 +53,7 @@ export const generatedImages = pgTable('generatedImages', {
     creditsUsed: integer("credits_used").notNull()
 });
 
-export const CredChangeReason = pgEnum("reason",["image_gen_debit","topup","package_purchase"]) //we might have to add new_model_train here in future?  
+export const CredChangeReason = pgEnum("reason",["image_gen_debit","topup","package_purchase"]) //we might have to add new_model_train here in future?
 
 export const creditTransactions = pgTable('credit_transactions', {
     id: uuid("id").primaryKey().defaultRandom(),
@@ -61,3 +62,45 @@ export const creditTransactions = pgTable('credit_transactions', {
     reason: CredChangeReason("reason"),
     createdAt: timestamp("created_at").defaultNow().notNull()
 });
+
+// RELATIONS:
+export const UserTableRelations = relations(UserTable, ({ one, many }) => {
+    return {
+        models: many(models),
+        generatedImages: many(generatedImages),
+        trainingImages: many(trainingImages),
+        creditTransactions: many(creditTransactions)
+    }
+})
+
+export const trainingImagesRelations = relations(trainingImages, ({ one }) => {
+    return {
+        user: one(UserTable, {
+            fields: [trainingImages.userId],
+            references: [UserTable.id]
+        })
+    }
+})
+
+export const modelRelations = relations(models, ({ one, many }) => {
+    return {
+        user: one(UserTable, {
+            fields: [models.userId],
+            references: [UserTable.id]
+        }),
+        generatedImages: many(generatedImages)
+    }
+})
+
+export const genImageRelations = relations(generatedImages, ({ one }) => {
+    return {
+        user: one(UserTable, {
+            fields: [generatedImages.userId],
+            references: [UserTable.id]
+        }),
+        model: one(models, {
+            fields: [generatedImages.modelId],
+            references: [models.id]
+        })
+    }
+})
