@@ -59,7 +59,7 @@ async function createNewUserModel(userId:string,status:"pending" | "success" | "
 }
 //createNewUserModel("c4396bd2-854b-4400-a7d9-72921c57e395", "success");
 //update training status upon completion
-async function updateModelTrainingStatus(status:"pending" | "success" | "failed",modelId:string) {
+async function updateModelTrainingStatus(status:"pending" | "success" | "failed", modelId:string) {
     const response = await db.update(models).set({
         status:status
     }).where(eq(models.id,modelId)).returning({
