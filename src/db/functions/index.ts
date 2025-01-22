@@ -126,8 +126,6 @@ async function deductUserCredits() {
     
 }
 
-// store generated image (both replicate and cloud url)
-
 // get user credits
 async function getUserCredits() {
     
@@ -136,11 +134,10 @@ async function getUserCredits() {
 //EXTRA FUNCTIONS:
 
 //update username/details
-async function updateUserName() {
+async function updateUserName(email:string,newName:string) {
     const user = await db.update(UserTable).set({
-        name:"newName"
-    }).where(eq(UserTable.name, "yash"))
-    
+        name:newName
+    }).where(eq(UserTable.email, email))
     const allusers = await db.select().from(UserTable)
     console.log(allusers)
 }
