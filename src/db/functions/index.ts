@@ -11,10 +11,12 @@ async function DbInsert() {
     const user = await db.query.UserTable.findFirst()
     console.log(user)
 }
-DbInsert()
+//DbInsert()
 
 
 async function DbDelete() {
     //delete complete table :
     await db.delete(UserTable);
 }
+
+DbDelete();
