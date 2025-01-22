@@ -15,6 +15,13 @@
       "when": 1737512776327,
       "tag": "0001_late_blue_marvel",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1737542507862,
+      "tag": "0002_perpetual_joystick",
+      "breakpoints": true
     }
   ]
 }

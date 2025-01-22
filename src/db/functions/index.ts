@@ -12,8 +12,10 @@ async function createNewUser(name:string,email:string) {
       id:UserTable.id  
     })
     console.log(newUser)
+    //await getAllUsers()
+    //await getAllTrainingData()
 }
-createNewUser("yash7","yash7@gmail.com")
+createNewUser("yash9","yash9@gmail.com")
 
 //get all users:
 async function getAllUsers() {
@@ -25,13 +27,35 @@ async function getAllUsers() {
 
 
 // store user sent training images to cloud (get cloud url)
-async function createNewTrainingImage() {
-    await db.insert(trainingImages).values({
-        status: "success",
-        userId: "35c81749-b2aa-4a50-a55f-f86f3cb2c64e",
+async function createNewTrainingImage(userId:string) {
+    const response = await db.insert(trainingImages).values({
+        status: "pending",
+        userId: userId,
+    }).returning({
+        id:trainingImages.id
     })
+    console.log(response);
+    return response
 }
-//InsertTrainingImage()
+//createNewTrainingImage("c4396bd2-854b-4400-a7d9-72921c57e395")
+
+//update training status upon completion
+async function updateTrainingStatus(status:"pending" | "success" | "failed") {
+    const response = await db.update(trainingImages).set({
+        status:status
+    }).returning({
+        id:trainingImages.id
+    })
+    return response
+}
+
+//get all training data
+async function getAllTrainingData() {
+    const trainings = await db.select().from(trainingImages);
+    console.log(trainings);
+    return trainings;
+}
+//getAllTrainingData()
 
 //store user's new model on training complete
 async function createNewUserModel() {

@@ -24,7 +24,7 @@ export const trainingImages = pgTable('training_images', {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id").references(()=>UserTable.id).notNull(),
     cloudUrl: varchar("cloud_url", { length: 512 }),
-    status: StatusEnum("status").notNull(),
+    status: StatusEnum("status"),
     createdAt: timestamp("created_at").defaultNow().notNull()
 });
 
@@ -34,7 +34,7 @@ export const models = pgTable('models', {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id").references(() => UserTable.id).notNull(),
     replicateModelId: varchar("replicate_model_id", { length: 512 }).unique(),
-    status: StatusEnum("status").notNull(),
+    status: StatusEnum("status"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
@@ -48,7 +48,7 @@ export const generatedImages = pgTable('generatedImages', {
     cloudUrl: varchar("cloud_url", { length: 512 }),
     replicateUrl: varchar("replicate_url", { length: 512 }).notNull(),
     prompt: text("prompt").notNull(),
-    status: StatusEnum("status").notNull(),
+    status: StatusEnum("status"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     creditsUsed: integer("credits_used").notNull()
 });
