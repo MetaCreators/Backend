@@ -4,17 +4,25 @@ import { trainingImages, UserTable } from "../schema";
 import "dotenv/config"
 
 // create new user upon signup
-async function createNewUser() {
-    //insert a value in some table:
-    await db.insert(UserTable).values({
-        name: "yash",
-        email: "yash@gmail.com"
+async function createNewUser(name:string,email:string) {
+    const newUser = await db.insert(UserTable).values({
+        name: name,
+        email: email
+    }).returning({
+      id:UserTable.id  
     })
-
-    const user = await db.query.UserTable.findFirst()
-    console.log(user)
+    console.log(newUser)
 }
-//createNewUser()
+createNewUser("yash7","yash7@gmail.com")
+
+//get all users:
+async function getAllUsers() {
+    const users = await db.select().from(UserTable);
+    console.log(users);
+    return users;
+}
+//getAllUsers()
+
 
 // store user sent training images to cloud (get cloud url)
 async function createNewTrainingImage() {
