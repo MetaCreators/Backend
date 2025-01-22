@@ -1,7 +1,8 @@
 import { db } from "../db";
 import { UserTable } from "../schema";
 import "dotenv/config"
-async function main() {
+async function DbInsert() {
+    //insert a value in some table:
     await db.insert(UserTable).values({
         name: "yash",
         email: "yash@gmail.com"
@@ -10,4 +11,10 @@ async function main() {
     const user = await db.query.UserTable.findFirst()
     console.log(user)
 }
-main()
+DbInsert()
+
+
+async function DbDelete() {
+    //delete complete table :
+    await db.delete(UserTable);
+}

@@ -1,33 +1,63 @@
-import { integer, pgTable, serial, text, uuid, varchar } from "drizzle-orm/pg-core";
+import { integer, pgEnum, pgTable, text, timestamp, unique, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
+
+export const StatusEnum = pgEnum("status", ["pending", "success", "failed"]);
 
 export const UserTable = pgTable('users', {
     id: uuid("id").primaryKey().defaultRandom(),
     name: varchar("name", {length:255}).notNull(), 
     email: varchar('email', { length: 255 }).notNull().unique(),
-    availableCreds: integer("availableCreds").notNull().default(0),
-    trainingImgCloudUrl: varchar("trainingImgCloudUrl"),
-    generatedImgCloudUrl:varchar("generatedImgCloudUrl")
+    availableCreds: integer("available_credits").notNull().default(0),
+    totalMoneyPaid: integer("totalMoneyPaidUSD").default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull()
+}, table => {
+    return {
+        emailIndex: uniqueIndex("emailIndex").on(table.email),
+        uniqueEmailAndCreds: unique("uniqueEmailAndCreds").on(table.email,table.availableCreds)
+    }
 });
 
+//after saving user's zip on cloud, we store it to db using the cloud storage url:
+//url will be something like => aws.s3.com/storage/{userId}/trainingImages/{imgId}
+export const trainingImages = pgTable('training_images', {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").references(()=>UserTable.id).notNull(),
+    cloudUrl: varchar("cloud_url", { length: 512 }),
+    status: StatusEnum("status").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull()
+});
+
+//updatedAt should be updated when the model status changes (e.g., from training to ready).
+//add triggers to automatically update updatedAt on row updates ?
+export const models = pgTable('models', {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").references(() => UserTable.id).notNull(),
+    replicateModelId: varchar("replicate_model_id", { length: 512 }).unique(),
+    status: StatusEnum("status").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+//after generating image from replicate, we first store it on cloud storage , and then send back this cloud storage url to the user
+//url will be something like => aws.s3.com/storage/{userId}/generatedImages/{imgId}
 export const generatedImages = pgTable('generatedImages', {
     id: uuid("id").primaryKey().defaultRandom(),
-    imageId:varchar("imageId").unique(),
-    modelId:uuid("modelId").references(()=>modelDetails.id).notNull(),
-    userId:uuid("userId").references(()=>UserTable.id).notNull()
-})
+    replicateImageId: varchar("imageId", { length: 512 }).unique(),
+    modelId: uuid("model_id").references(() => models.id).notNull(),
+    userId: uuid("userId").references(() => UserTable.id).notNull(),
+    cloudUrl: varchar("cloud_url", { length: 512 }),
+    replicateUrl: varchar("replicate_url", { length: 512 }).notNull(),
+    prompt: text("prompt").notNull(),
+    status: StatusEnum("status").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    creditsUsed: integer("credits_used").notNull()
+});
 
-export const modelDetails = pgTable('modelDetails', {
+export const CredChangeReason = pgEnum("reason",["image_gen_debit","topup","package_purchase"]) //we might have to add new_model_train here in future?  
+
+export const creditTransactions = pgTable('credit_transactions', {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("userId").references(()=>UserTable.id).notNull(),
-    modelId:varchar("modelId").unique(),
-})
-
-export const userQueries = pgTable('userQueries', {
-    id: uuid("id").primaryKey().defaultRandom(),  
-    modelId: uuid("modelId").references(()=>modelDetails.id).notNull(),
-    query: varchar("query"),
-    userId: uuid("userId").references(()=>UserTable.id).notNull(),
-    genImgId:uuid("imageId").references(()=>generatedImages.id).notNull()
-})
-
-//there's surely a bug here, in the schema and relations
+    userId: uuid("user_id").references(() => UserTable.id).notNull(),
+    changeAmount: integer("change_amount").notNull(), // Positive for addition, negative for deduction
+    reason: CredChangeReason("reason"),
+    createdAt: timestamp("created_at").defaultNow().notNull()
+});
