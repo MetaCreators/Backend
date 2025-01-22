@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "../db";
 import { generatedImages, models, trainingImages, UserTable } from "../schema";
 import "dotenv/config"
@@ -57,7 +57,7 @@ async function createNewUserModel(userId:string,status:"pending" | "success" | "
     console.log(response);
     return response
 }
-createNewUserModel("c4396bd2-854b-4400-a7d9-72921c57e395", "success");
+//createNewUserModel("c4396bd2-854b-4400-a7d9-72921c57e395", "success");
 //update training status upon completion
 async function updateModelTrainingStatus(status:"pending" | "success" | "failed",modelId:string) {
     const response = await db.update(models).set({
@@ -76,7 +76,14 @@ async function getAllModelsData() {
     console.log(allModels);
     return allModels;
 }
-getAllModelsData()
+//getAllModelsData()
+
+//get a User's Models:
+async function getUserModels(userId:string) {
+    const allModels = await db.select().from(models).where(eq(models.userId,userId));
+    console.log(allModels);
+    return allModels;
+}
 
 //store user's new generated Image
 async function storeGeneratedImage(cloudUrl:string,replicateUrl:string,modelId:string,replicateImageId:string,userId:string,prompt:string,status:"pending" | "success" | "failed",creditsUsed:number) {
@@ -96,20 +103,18 @@ async function storeGeneratedImage(cloudUrl:string,replicateUrl:string,modelId:s
     return response
 }
 // get user images
-async function getUserImages() {
-    const user = await db.query.UserTable.findMany({
-        columns: { email: true,id:true },
-        with: {
-            trainingImages: {
-                columns: {
-                    cloudUrl: true,
-                    createdAt:true
-            }
-        }}
+async function getUserGeneratedImages(userId:string,modelId:string) {
+    const user = await db.query.generatedImages.findMany({
+        columns: { cloudUrl: true, id: true },
+        where: and(
+            eq(generatedImages.userId, userId),
+            eq(generatedImages.modelId, modelId)
+        )
     })
     console.log(user);
+    return user;
 }
-//getUserImages()
+//getUserGeneratedImages()
 
 // add credits to user when he pays
 async function addUserCredits() {
