@@ -15,7 +15,7 @@ async function createNewUser(name:string,email:string) {
     //await getAllUsers()
     //await getAllTrainingData()
 }
-createNewUser("yash9","yash9@gmail.com")
+//createNewUser("yash9","yash9@gmail.com")
 
 //get all users:
 async function getAllUsers() {
@@ -40,22 +40,23 @@ async function createNewTrainingImage(userId:string) {
 //createNewTrainingImage("c4396bd2-854b-4400-a7d9-72921c57e395")
 
 //update training status upon completion
-async function updateTrainingStatus(status:"pending" | "success" | "failed") {
+async function updateTrainingStatus(status:"pending" | "success" | "failed",trainingId:string) {
     const response = await db.update(trainingImages).set({
         status:status
-    }).returning({
+    }).where(eq(trainingImages.id,trainingId)).returning({
         id:trainingImages.id
     })
+    console.log(response);
     return response
 }
-
+//updateTrainingStatus("success","dbce8b99-0cc7-4746-b140-1ea8576e5083")
 //get all training data
 async function getAllTrainingData() {
     const trainings = await db.select().from(trainingImages);
     console.log(trainings);
     return trainings;
 }
-//getAllTrainingData()
+getAllTrainingData()
 
 //store user's new model on training complete
 async function createNewUserModel() {
