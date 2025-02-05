@@ -20,9 +20,34 @@ try {
 
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
-app.use(cors());
+const corsOptions = {
+  origin: function (origin:any, callback:any) {
+    const allowedOrigins = [
+      'https://lithouse.in',
+      'http://localhost:3000',
+      'http://localhost:5173'
+    ];
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+};
+
+app.options('*', cors(corsOptions));
 
 app.use(express.json());
+
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error(err.stack);
+  res.status(500).json({ error: "Something broke!" });
+});
 
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello, TypeScript with Express!");
