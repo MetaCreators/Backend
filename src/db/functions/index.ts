@@ -123,8 +123,10 @@ async function deductUserCredits() {
 }
 
 // get user credits
-async function getUserCredits() {
-    
+async function getUserCredits(userId:string) {
+    const user = await db.select().from(UserTable).where(eq(UserTable.id, userId));
+    console.log(user);
+    return user.length > 0 ? user[0].availableCreds : null;
 }
 
 //EXTRA FUNCTIONS:
