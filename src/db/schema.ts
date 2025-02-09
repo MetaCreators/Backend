@@ -104,3 +104,12 @@ export const genImageRelations = relations(generatedImages, ({ one }) => {
         })
     }
 })
+
+export const creditTransactionsRelations = relations(creditTransactions, ({ one }) => {
+    return {
+        user: one(UserTable, {
+            fields: [creditTransactions.userId],
+            references: [UserTable.id]
+        })
+    }
+})

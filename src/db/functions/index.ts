@@ -118,8 +118,17 @@ async function addUserCredits() {
 }
 
 // deduct credit when he generates image
-async function deductUserCredits() {
+async function deductUserCredits(userId:string,deduction:number) {
+    const userCredits = await getUserCredits(userId);
+    //handle insufficient credits case here
+    if (!userCredits) {
+        return null;
+    }
+    await db.update(UserTable).set({
+        availableCreds: userCredits - deduction
+    }).where(eq(UserTable.id, userId));
     
+    console.log(getUserCredits(userId));
 }
 
 // get user credits
