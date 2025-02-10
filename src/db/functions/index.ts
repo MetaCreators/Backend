@@ -118,13 +118,26 @@ async function addUserCredits() {
 }
 
 // deduct credit when he generates image
-async function deductUserCredits() {
+async function deductUserCredits(userId:string,deduction:number) {
+    const userCredits = await getUserCredits(userId);
+    //handle insufficient credits case here
+    if (!userCredits) {
+        return null;
+    }
+    await db.update(UserTable).set({
+        availableCreds: userCredits - deduction
+    }).where(eq(UserTable.id, userId));
     
+    console.log(getUserCredits(userId));
 }
 
+//Example usage: deductUserCredits("01f90e3d-171d-4313-8985-f25ccd5cd915", 10);
+
 // get user credits
-async function getUserCredits() {
-    
+async function getUserCredits(userId:string) {
+    const user = await db.select().from(UserTable).where(eq(UserTable.id, userId));
+    console.log(user);
+    return user.length > 0 ? user[0].availableCreds : null;
 }
 
 //EXTRA FUNCTIONS:
