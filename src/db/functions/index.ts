@@ -131,6 +131,8 @@ async function deductUserCredits(userId:string,deduction:number) {
     console.log(getUserCredits(userId));
 }
 
+//Example usage: deductUserCredits("01f90e3d-171d-4313-8985-f25ccd5cd915", 10);
+
 // get user credits
 async function getUserCredits(userId:string) {
     const user = await db.select().from(UserTable).where(eq(UserTable.id, userId));

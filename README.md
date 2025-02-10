@@ -62,3 +62,8 @@ building the image:
 ```
 docker build -t lithouse_backend .
 ```
+
+connecting to db using docker:
+```
+docker run --rm -it postgres psql "DATABASE_URL"
+```
