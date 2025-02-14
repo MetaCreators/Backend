@@ -122,8 +122,7 @@ app.post("/api/imagefinetune",async (req, res) => {
       message:"training input failed",
       error:error
     })
-  }
-    
+  } 
 });
 
 app.listen(PORT, () => {
