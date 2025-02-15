@@ -137,30 +137,44 @@ app.post("/api/imagefinetune",async (req, res) => {
 });
 
 app.post("/upload", async (req, res) => {
-  const blob = req.body.blob; 
+  const imageUrl = req.body.imageUrl; 
   const key = `Image-${Date.now()}`;
-  const s3Params = {
-    Bucket: bucket,
-    Key: key,
-  };
+ 
 //here we get a url where we can upload our images
   try {
+
+    const response = await fetch(imageUrl);
+    const arrayBuffer = await response.arrayBuffer();
+    const blob = Buffer.from(arrayBuffer);
+
+    const s3Params = {
+      Bucket: bucket,
+      Key: key,
+      //Body: blob,
+      ContentType: response.headers.get("content-type") || "image/jpeg"
+    };
+
     const uploadUrl = await s3Client.getSignedUrlPromise("putObject", s3Params);
     console.log("presigned URl is ", uploadUrl);
     const uploading = await fetch(uploadUrl, {
       method: "PUT",
-      body: blob
+      body: blob,
+      headers: {
+        "Content-Type": s3Params.ContentType
+      }
     });
     console.log(uploading);
 
-    // res.json({
-    //   url: uploadUrl,
-    //   name: key
-    // });
+    res.json({
+      message: "Image uploaded successfully",
+      url: uploadUrl,
+      key
+    });
   } catch (err) {
-    console.log("error uploading images",err)
+    console.error("Error uploading image:", err);
+    res.status(500).json({ error: "Failed to upload image" });
   }
-  res.status(200);
+  //res.status(200);
 })
 
 app.get('/download', async (req, res) => {
