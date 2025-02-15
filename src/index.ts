@@ -71,6 +71,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 
 app.use("/api", apiRoutes);
 
+//TODO: PUT THIS IN PROPER ROUTE
 app.post("/thumbnail", authMiddleware, async (req: Request, res: Response) => {
   try {
     const token = req.headers.authorization?.split("Bearer ")[1];
@@ -142,6 +143,7 @@ app.post("/upload", async (req, res) => {
   // save it to DO(/upload endpoint) and then send the endpoint from /download endpoint
   //2) create username buckets eg image_userId or something like this
   //3) save the DO url in db
+  //4)if bucket already exists, store the image in the same, else create new
   const imageUrl = req.body.imageUrl; 
   const key = `Image-${Date.now()}`;
  

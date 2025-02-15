@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Replicate from "replicate";
 import { Request, Response } from "express";
+import * as aws from "aws-sdk";
 
 // Constants
 const TRIGGER_WORD = "Shikhar";
@@ -14,6 +15,14 @@ const DEFAULT_GEMINI_CONFIG = {
   topK: 40,
   maxOutputTokens: 8192,
 };
+
+const bucket = "lithouseuserimages";
+const digiendpoint = new aws.Endpoint("blr1.digitaloceanspaces.com");
+const s3Client = new aws.S3({
+    endpoint: digiendpoint, 
+    accessKeyId: process.env.DIGIOCEAN_OBJECT_ACCESS_ID || "" ,
+    secretAccessKey: process.env.DIGIOCEAN_OBJECT_SECRET || "" 
+});
 
 export class GeminiService {
   private model: any;
@@ -127,6 +136,7 @@ export class ReplicateService {
 
 interface GenerateImageRequest {
   userQuery: string;
+  userId: string;
 }
 
 export class ImageController {
@@ -148,7 +158,7 @@ export class ImageController {
     try {
       console.log("Request body:", req.body);
 
-      const { userQuery } = req.body;
+      const { userQuery, userId } = req.body;
 
       if (
         !userQuery ||
@@ -164,9 +174,49 @@ export class ImageController {
       const imageUrls = await this.replicateService.generateImage(
         enhancedPrompt
       );
+      const uploadedUrls: string[] = [];
+      for (const imageUrl of imageUrls) { 
+        try {
+          const key = `${userId}/${Date.now()}`;
+          //const replicateImage = imageUrls[0];
+          const response = await fetch(imageUrl);
+          const arrayBuffer = await response.arrayBuffer();
+          const blob = Buffer.from(arrayBuffer);
 
-      // Since we're now getting full URLs from Replicate, we don't need to modify them
-      res.json({ urls: imageUrls });
+          const s3Params = {
+            Bucket: bucket,
+            Key: key,
+            ContentType: response.headers.get("content-type") || "image/jpeg"
+          };
+
+          const uploadUrl = await s3Client.getSignedUrlPromise("putObject", s3Params);
+          console.log("presigned URl is ", uploadUrl);
+          const uploading = await fetch(uploadUrl, {
+            method: "PUT",
+            body: blob,
+            headers: {
+              "Content-Type": s3Params.ContentType
+            }
+          });        
+          console.log("Image saving to DO status", uploading);
+
+          const s3ParamsForGETURL = {
+            Bucket: bucket,
+            Key: key
+          };
+
+          const getURL = await s3Client.getSignedUrlPromise("getObject", s3ParamsForGETURL);
+          console.log("download url is", getURL);
+          uploadedUrls.push(getURL);
+        } catch (err) {
+          console.error("Error uploading image in bucket:", err);
+          //res.status(500).json({ error: "Failed to upload image in bucket" });
+        }
+      } 
+      res.json({ urls: uploadedUrls });
+      //send string[] of digital ocean bucker urls here instead of imageUrls
+      // for a user, all his images should be in userId/ folder only
+      //res.json({ urls: imageUrls });
     } catch (error) {
       console.error("Error in image generation:", error);
       res.status(500).json({
