@@ -137,12 +137,16 @@ app.post("/api/imagefinetune",async (req, res) => {
 });
 
 app.post("/upload", async (req, res) => {
+  //TODO:
+  //1)flow => when we generate an image on replicate => instead of sending it to frontend,
+  // save it to DO(/upload endpoint) and then send the endpoint from /download endpoint
+  //2) create username buckets eg image_userId or something like this
+  //3) save the DO url in db
   const imageUrl = req.body.imageUrl; 
   const key = `Image-${Date.now()}`;
  
-//here we get a url where we can upload our images
+  //here we get a url where we can upload our images
   try {
-
     const response = await fetch(imageUrl);
     const arrayBuffer = await response.arrayBuffer();
     const blob = Buffer.from(arrayBuffer);
@@ -150,7 +154,6 @@ app.post("/upload", async (req, res) => {
     const s3Params = {
       Bucket: bucket,
       Key: key,
-      //Body: blob,
       ContentType: response.headers.get("content-type") || "image/jpeg"
     };
 
@@ -174,7 +177,6 @@ app.post("/upload", async (req, res) => {
     console.error("Error uploading image:", err);
     res.status(500).json({ error: "Failed to upload image" });
   }
-  //res.status(200);
 })
 
 app.get('/download', async (req, res) => {
