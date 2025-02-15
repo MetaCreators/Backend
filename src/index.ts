@@ -5,6 +5,7 @@ import apiRoutes from "./routes/apiRoutes";
 import { authMiddleware } from "./middleware/auth";
 import { supabase } from "./lib/supabase";
 import { createClient } from "redis";
+import * as aws from "aws-sdk";
 
 const client = createClient({
     url: process.env.REDIS_URL
@@ -39,6 +40,16 @@ const corsOptions = {
   preflightContinue: false,
   optionsSuccessStatus: 204
 };
+
+const bucket = "lithouseuserimages";
+const digiendpoint = new aws.Endpoint("blr1.digitaloceanspaces.com");
+const s3Client = new aws.S3({
+    endpoint: digiendpoint, // Find your endpoint in the control panel, under Settings. Prepend "https://".
+    //forcePathStyle: false, // Configures to use subdomain/virtual calling format.
+    //region: "blr1", // Must be "us-east-1" when creating new Spaces. Otherwise, use the region in your endpoint (for example, nyc3).
+    accessKeyId: process.env.DIGIOCEAN_OBJECT_ACCESS_ID || "" , // Access key pair. You can create access key pairs using the control panel or API.
+    secretAccessKey: process.env.DIGIOCEAN_OBJECT_SECRET || "" // Secret access key defined through an environment variable.
+});
 
 app.options('*', cors(corsOptions));
 
@@ -124,6 +135,45 @@ app.post("/api/imagefinetune",async (req, res) => {
     })
   } 
 });
+
+app.post("/upload", async (req, res) => {
+  const blob = req.body.blob; 
+  const key = `Image-${Date.now()}`;
+  const s3Params = {
+    Bucket: bucket,
+    Key: key,
+  };
+//here we get a url where we can upload our images
+  try {
+    const uploadUrl = await s3Client.getSignedUrlPromise("putObject", s3Params);
+    console.log("presigned URl is ", uploadUrl);
+    const uploading = await fetch(uploadUrl, {
+      method: "PUT",
+      body: blob
+    });
+    console.log(uploading);
+
+    // res.json({
+    //   url: uploadUrl,
+    //   name: key
+    // });
+  } catch (err) {
+    console.log("error uploading images",err)
+  }
+  res.status(200);
+})
+
+app.get('/download', async (req, res) => {
+  const key = req.query.key;
+  const s3Params = {
+    Bucket: bucket,
+    Key: key
+  };
+  const getURL = await s3Client.getSignedUrlPromise("getObject", s3Params);
+  console.log("download url is", getURL);
+
+  res.json({ url: getURL });
+})
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
