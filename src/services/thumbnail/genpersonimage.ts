@@ -177,8 +177,7 @@ export class ImageController {
       const uploadedUrls: string[] = [];
       for (const imageUrl of imageUrls) { 
         try {
-          const key = `${userId}/${Date.now()}`;
-          //const replicateImage = imageUrls[0];
+          const key = `${userId}/${Date.now()}.webp`;
           const response = await fetch(imageUrl);
           const arrayBuffer = await response.arrayBuffer();
           const blob = Buffer.from(arrayBuffer);
@@ -186,7 +185,7 @@ export class ImageController {
           const s3Params = {
             Bucket: bucket,
             Key: key,
-            ContentType: response.headers.get("content-type") || "image/jpeg"
+            ContentType: "image/webp"
           };
 
           const uploadUrl = await s3Client.getSignedUrlPromise("putObject", s3Params);
@@ -210,13 +209,9 @@ export class ImageController {
           uploadedUrls.push(getURL);
         } catch (err) {
           console.error("Error uploading image in bucket:", err);
-          //res.status(500).json({ error: "Failed to upload image in bucket" });
         }
       } 
       res.json({ urls: uploadedUrls });
-      //send string[] of digital ocean bucker urls here instead of imageUrls
-      // for a user, all his images should be in userId/ folder only
-      //res.json({ urls: imageUrls });
     } catch (error) {
       console.error("Error in image generation:", error);
       res.status(500).json({

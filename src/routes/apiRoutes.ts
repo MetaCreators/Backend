@@ -23,7 +23,7 @@ const replicateService = new ReplicateService(
 // Initialize controller
 const imageController = new ImageController(geminiService, replicateService);
 
-router.post("/script", authMiddleware, generateScript);
+router.post("/script", generateScript);
 
 router.post("/description", authMiddleware, generateDescription);
 
@@ -33,7 +33,6 @@ router.post("/description", authMiddleware, generateDescription);
 
 router.post(
   "/genpersonimage",
-  authMiddleware,
   (req: Request, res: Response) => {
     imageController.generateImage(req, res);
   }
