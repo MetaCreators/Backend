@@ -139,9 +139,6 @@ app.post("/api/imagefinetune",async (req, res) => {
 
 app.post("/upload", async (req, res) => {
   //TODO:
-  //1)flow => when we generate an image on replicate => instead of sending it to frontend,
-  // save it to DO(/upload endpoint) and then send the endpoint from /download endpoint
-  //2) create username buckets eg image_userId or something like this
   //3) save the DO url in db
   //4)if bucket already exists, store the image in the same, else create new
   const imageUrl = req.body.imageUrl; 
