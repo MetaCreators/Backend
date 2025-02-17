@@ -140,7 +140,8 @@ app.post("/api/imagefinetune",async (req, res) => {
 app.post("/upload", async (req, res) => {
   //TODO:
   //3) save the DO url in db
-  //4)if bucket already exists, store the image in the same, else create new
+  //4)if folder already exists, store the image in the same, else create new => instead of checking this on spaces, we can just query
+  // the db => check if there's a folder for the user => if yes then save in it else create a new
   const imageUrl = req.body.imageUrl; 
   const key = `Image-${Date.now()}`;
  
