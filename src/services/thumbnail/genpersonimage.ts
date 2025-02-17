@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import Replicate from "replicate";
 import { Request, Response } from "express";
 import * as aws from "aws-sdk";
+import { storeGeneratedImage } from "../../db/functions";
 
 // Constants
 const TRIGGER_WORD = "Shikhar";
@@ -177,7 +178,7 @@ export class ImageController {
       const uploadedUrls: string[] = [];
       for (const imageUrl of imageUrls) { 
         try {
-          const key = `${userId}/${Date.now()}.webp`;
+          const key = `${userId}/generatedImages/${Date.now()}.webp`;
           const response = await fetch(imageUrl);
           const arrayBuffer = await response.arrayBuffer();
           const blob = Buffer.from(arrayBuffer);
@@ -206,6 +207,8 @@ export class ImageController {
 
           const getURL = await s3Client.getSignedUrlPromise("getObject", s3ParamsForGETURL);
           console.log("download url is", getURL);
+          //TODO: make modelID dynamic
+          //storeGeneratedImage(getURL,imageUrl,"22222",)
           uploadedUrls.push(getURL);
         } catch (err) {
           console.error("Error uploading image in bucket:", err);

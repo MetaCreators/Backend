@@ -83,7 +83,7 @@ async function getUserModels(userId:string) {
 }
 
 //store user's new generated Image => example usage: storeGeneratedImage("aws/storage","replicateURL","0f513bf9-7e63-4ea2-9314-f88621756ed5","replicateImgId","4c5adfad-5a24-4de4-ae1c-046f13559ab4","some random prompt","success",5)
-async function storeGeneratedImage(cloudUrl:string,replicateUrl:string,modelId:string,replicateImageId:string,userId:string,prompt:string,status:"pending" | "success" | "failed",creditsUsed:number) {
+export async function storeGeneratedImage(cloudUrl:string,replicateUrl:string,modelId:string,replicateImageId:string,userId:string,prompt:string,status:"pending" | "success" | "failed",creditsUsed:number) {
     const response = await db.insert(generatedImages).values({
         status: status,//indicates whether saving to cloud was successful or not
         userId: userId,
