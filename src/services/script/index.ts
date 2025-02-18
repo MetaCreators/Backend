@@ -20,22 +20,23 @@ const model = genAI.getGenerativeModel({
 
 export const generateScript = async (req: Request, res: Response) => {
   try {
-    const token = req.headers.authorization?.split("Bearer ")[1];
+    //TODO: SOMETHING IS FISHY HERE IN AUTHORIZATION
+    // const token = req.headers.authorization?.split("Bearer ")[1];
 
-    if (!token) {
-      res.status(401).json({ message: "No authentication token provided" });
-      return;
-    }
+    // if (!token) {
+    //   res.status(401).json({ message: "No authentication token provided" });
+    //   return;
+    // }
 
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser(token);
+    // const {
+    //   data: { user },
+    //   error,
+    // } = await supabase.auth.getUser(token);
 
-    if (error || !user) {
-      res.status(401).json({ message: "Invalid authentication token" });
-      return;
-    }
+    // if (error || !user) {
+    //   res.status(401).json({ message: "Invalid authentication token" });
+    //   return;
+    // }
 
     const { points, length, style, targetAudience } = req.body;
 

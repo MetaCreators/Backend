@@ -1,6 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Replicate from "replicate";
 import { Request, Response } from "express";
+import * as aws from "aws-sdk";
+import { storeGeneratedImage } from "../../db/functions";
 
 // Constants
 const TRIGGER_WORD = "Shikhar";
@@ -14,6 +16,14 @@ const DEFAULT_GEMINI_CONFIG = {
   topK: 40,
   maxOutputTokens: 8192,
 };
+
+const bucket = "lithouseuserimages";
+const digiendpoint = new aws.Endpoint("blr1.digitaloceanspaces.com");
+const s3Client = new aws.S3({
+    endpoint: digiendpoint, 
+    accessKeyId: process.env.DIGIOCEAN_OBJECT_ACCESS_ID || "" ,
+    secretAccessKey: process.env.DIGIOCEAN_OBJECT_SECRET || "" 
+});
 
 export class GeminiService {
   private model: any;
@@ -68,7 +78,6 @@ export class GeminiService {
     }
   }
 }
-
 export class ReplicateService {
   private replicate: Replicate;
   private outputDir: string;
@@ -81,7 +90,8 @@ export class ReplicateService {
     this.outputDir = outputDir;
   }
 
-  async generateImage(prompt: string): Promise<string[]> {
+//TODO: FIX THE OUTPUT OF generateImage TO RETURN BOTH PREDICTION ID AND PREDICTION URL, AND THEN SEND THE ID TO storeGeneratedImage
+  async generateImage(prompt: string): Promise<GenerateImageProps> {
     try {
       const input = {
         prompt,
@@ -101,21 +111,25 @@ export class ReplicateService {
 
       console.log("Sending request to Replicate API with input:", input);
 
-      const output = await this.replicate.run(
-        "adityaraj-007/shikhar_flux:925da5f563c07bb620a3bf3cc2185079b1cfc7d62f47a9c234e67dbc36eab738",
-        { input }
-      );
+      const prediction = await this.replicate.predictions.create({
+        version: "925da5f563c07bb620a3bf3cc2185079b1cfc7d62f47a9c234e67dbc36eab738",
+        input: input,
+        wait: true
+      });
 
-      console.log("Replicate API response:", output);
-      console.log("Output type:", typeof output);
-
-      if (Array.isArray(output) && output.length > 0) {
-        if (typeof output[0] === "string" && output[0].startsWith("http")) {
-          return output;
-        }
+      const predictionId = prediction.id;
+      const outputUrl = prediction.output;
+      console.log("prediction id is", predictionId);
+      console.log("prediction url is", outputUrl);
+      
+      if (Array.isArray(prediction.output)) {
+        return {
+          predictionId,
+          outputUrl
+        };
       }
 
-      throw new Error(`Unexpected output format: ${typeof output}`);
+      throw new Error(`Invalid output format received from Replicate API`);
     } catch (error) {
       console.error("Error in Replicate image generation:", error);
       throw error instanceof Error
@@ -127,8 +141,13 @@ export class ReplicateService {
 
 interface GenerateImageRequest {
   userQuery: string;
+  userId: string;
 }
 
+interface GenerateImageProps {
+  predictionId: string;
+  outputUrl: string[]
+}
 export class ImageController {
   private geminiService: GeminiService;
   private replicateService: ReplicateService;
@@ -148,7 +167,7 @@ export class ImageController {
     try {
       console.log("Request body:", req.body);
 
-      const { userQuery } = req.body;
+      const { userQuery, userId } = req.body;
 
       if (
         !userQuery ||
@@ -164,9 +183,53 @@ export class ImageController {
       const imageUrls = await this.replicateService.generateImage(
         enhancedPrompt
       );
+      const uploadedUrls: string[] = [];
+      const imageId = imageUrls.predictionId;
+      //TODO: FIX THE STRUCTURE OF imageUrls => IT CONTAINS MULTIPLE URLS AND THEIR ID
+      //TODO:  FOR NOW WE GENERATE ONLY A SINGLE IMAGE SO THIS METHOD WORKS AS IT IS, LATER WE SHOULD MODIFY IT
+      for (const imageUrl of imageUrls.outputUrl) { 
+        //I SHOULD GET BOTH imageUrl.outputUrl AND imageUrl.
+        try {
+          const key = `${userId}/generatedImages/${Date.now()}.webp`;
+          const response = await fetch(imageUrl);
+          const arrayBuffer = await response.arrayBuffer();
+          const blob = Buffer.from(arrayBuffer);
 
-      // Since we're now getting full URLs from Replicate, we don't need to modify them
-      res.json({ urls: imageUrls });
+          const s3Params = {
+            Bucket: bucket,
+            Key: key,
+            ContentType: "image/webp"
+          };
+
+          const uploadUrl = await s3Client.getSignedUrlPromise("putObject", s3Params);
+          console.log("presigned URl is ", uploadUrl);
+          const uploading = await fetch(uploadUrl, {
+            method: "PUT",
+            body: blob,
+            headers: {
+              "Content-Type": s3Params.ContentType
+            }
+          });        
+          console.log("Image saving to DO status", uploading);
+
+          const s3ParamsForGETURL = {
+            Bucket: bucket,
+            Key: key
+          };
+
+          const getURL = await s3Client.getSignedUrlPromise("getObject", s3ParamsForGETURL);
+          console.log("download url is", getURL);
+          //TODO: make modelID dynamic
+          //TODO: ERROR HANDLING: EDGE CASES
+          //TODO: CREDIT DEDUCTION PENDING
+          const store = await storeGeneratedImage(getURL, imageUrl, "31c58651-e0a3-4ca1-a32e-0dad450f8171", imageId, userId, enhancedPrompt, "success", 1);
+          console.log("storing generated image:", store);
+          uploadedUrls.push(getURL);
+        } catch (err) {
+          console.error("Error uploading image in bucket:", err);
+        }
+      } 
+      res.json({ urls: uploadedUrls });
     } catch (error) {
       console.error("Error in image generation:", error);
       res.status(500).json({

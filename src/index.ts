@@ -5,6 +5,7 @@ import apiRoutes from "./routes/apiRoutes";
 import { authMiddleware } from "./middleware/auth";
 import { supabase } from "./lib/supabase";
 import { createClient } from "redis";
+import * as aws from "aws-sdk";
 
 const client = createClient({
     url: process.env.REDIS_URL
@@ -40,6 +41,16 @@ const corsOptions = {
   optionsSuccessStatus: 204
 };
 
+const bucket = "lithouseuserimages";
+const digiendpoint = new aws.Endpoint("blr1.digitaloceanspaces.com");
+const s3Client = new aws.S3({
+    endpoint: digiendpoint, // Find your endpoint in the control panel, under Settings. Prepend "https://".
+    //forcePathStyle: false, // Configures to use subdomain/virtual calling format.
+    //region: "blr1", // Must be "us-east-1" when creating new Spaces. Otherwise, use the region in your endpoint (for example, nyc3).
+    accessKeyId: process.env.DIGIOCEAN_OBJECT_ACCESS_ID || "" , // Access key pair. You can create access key pairs using the control panel or API.
+    secretAccessKey: process.env.DIGIOCEAN_OBJECT_SECRET || "" // Secret access key defined through an environment variable.
+});
+
 app.options('*', cors(corsOptions));
 
 app.use(express.json());
@@ -60,6 +71,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 
 app.use("/api", apiRoutes);
 
+//TODO: PUT THIS IN PROPER ROUTE
 app.post("/thumbnail", authMiddleware, async (req: Request, res: Response) => {
   try {
     const token = req.headers.authorization?.split("Bearer ")[1];
@@ -122,9 +134,62 @@ app.post("/api/imagefinetune",async (req, res) => {
       message:"training input failed",
       error:error
     })
-  }
-    
+  } 
 });
+
+app.post("/upload", async (req, res) => {
+  //TODO:
+  //3) save the DO url in db => once we get the url from DO and replicate, just store it in db
+  //4)if folder already exists, store the image in the same, else create new => instead of checking this on spaces, we can just query
+  // the db => check if there's a folder for the user => if yes then save in it else create a new
+  const imageUrl = req.body.imageUrl; 
+  const key = `Image-${Date.now()}`;
+ 
+  //here we get a url where we can upload our images
+  try {
+    const response = await fetch(imageUrl);
+    const arrayBuffer = await response.arrayBuffer();
+    const blob = Buffer.from(arrayBuffer);
+
+    const s3Params = {
+      Bucket: bucket,
+      Key: key,
+      ContentType: response.headers.get("content-type") || "image/jpeg"
+    };
+
+    const uploadUrl = await s3Client.getSignedUrlPromise("putObject", s3Params);
+    console.log("presigned URl is ", uploadUrl);
+    const uploading = await fetch(uploadUrl, {
+      method: "PUT",
+      body: blob,
+      headers: {
+        "Content-Type": s3Params.ContentType
+      }
+    });
+    console.log(uploading);
+
+    res.json({
+      message: "Image uploaded successfully",
+      url: uploadUrl,
+      key
+    });
+  } catch (err) {
+    console.error("Error uploading image:", err);
+    res.status(500).json({ error: "Failed to upload image" });
+  }
+})
+
+app.get('/download', async (req, res) => {
+  const key = req.query.key;
+  const s3Params = {
+    Bucket: bucket,
+    Key: key
+  };
+  const getURL = await s3Client.getSignedUrlPromise("getObject", s3Params);
+  console.log("download url is", getURL);
+
+  res.json({ url: getURL });
+})
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
