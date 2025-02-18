@@ -78,7 +78,6 @@ export class GeminiService {
     }
   }
 }
-
 export class ReplicateService {
   private replicate: Replicate;
   private outputDir: string;
@@ -91,7 +90,8 @@ export class ReplicateService {
     this.outputDir = outputDir;
   }
 
-  async generateImage(prompt: string): Promise<string[]> {
+//TODO: FIX THE OUTPUT OF generateImage TO RETURN BOTH PREDICTION ID AND PREDICTION URL, AND THEN SEND THE ID TO storeGeneratedImage
+  async generateImage(prompt: string): Promise<GenerateImageProps> {
     try {
       const input = {
         prompt,
@@ -123,7 +123,10 @@ export class ReplicateService {
       console.log("prediction url is", outputUrl);
       
       if (Array.isArray(prediction.output)) {
-        return prediction.output;
+        return {
+          predictionId,
+          outputUrl
+        };
       }
 
       throw new Error(`Invalid output format received from Replicate API`);
@@ -141,6 +144,10 @@ interface GenerateImageRequest {
   userId: string;
 }
 
+interface GenerateImageProps {
+  predictionId: string;
+  outputUrl: string[]
+}
 export class ImageController {
   private geminiService: GeminiService;
   private replicateService: ReplicateService;
@@ -209,7 +216,7 @@ export class ImageController {
           const getURL = await s3Client.getSignedUrlPromise("getObject", s3ParamsForGETURL);
           console.log("download url is", getURL);
           //TODO: make modelID dynamic
-          //storeGeneratedImage(getURL,imageUrl,"22222",)
+          storeGeneratedImage(getURL,imageUrl,"22222",)
           uploadedUrls.push(getURL);
         } catch (err) {
           console.error("Error uploading image in bucket:", err);
