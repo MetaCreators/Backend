@@ -111,29 +111,22 @@ export class ReplicateService {
 
       console.log("Sending request to Replicate API with input:", input);
 
-      const output = await this.replicate.run(
-        "adityaraj-007/shikhar_flux:925da5f563c07bb620a3bf3cc2185079b1cfc7d62f47a9c234e67dbc36eab738",
-        { input }
-      );
-      //TODO: Do something like this to get the prediction id
-      // const prediction = await this.replicate.predictions.create({
-      //   model: "adityaraj-007/shikhar_flux",
-      //   version: "925da5f563c07bb620a3bf3cc2185079b1cfc7d62f47a9c234e67dbc36eab738",
-      //   input,
-      // });
-//       console.log("Prediction ID:", prediction.id);
-// console.log("Output URLs:", prediction.output);
+      const prediction = await this.replicate.predictions.create({
+        version: "925da5f563c07bb620a3bf3cc2185079b1cfc7d62f47a9c234e67dbc36eab738",
+        input: input,
+        wait: true
+      });
 
-      console.log("Replicate API response:", output);
-      console.log("Output type:", typeof output);
-
-      if (Array.isArray(output) && output.length > 0) {
-        if (typeof output[0] === "string" && output[0].startsWith("http")) {
-          return output;
-        }
+      const predictionId = prediction.id;
+      const outputUrl = prediction.output;
+      console.log("prediction id is", predictionId);
+      console.log("prediction url is", outputUrl);
+      
+      if (Array.isArray(prediction.output)) {
+        return prediction.output;
       }
 
-      throw new Error(`Unexpected output format: ${typeof output}`);
+      throw new Error(`Invalid output format received from Replicate API`);
     } catch (error) {
       console.error("Error in Replicate image generation:", error);
       throw error instanceof Error
