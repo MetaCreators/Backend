@@ -184,7 +184,11 @@ export class ImageController {
         enhancedPrompt
       );
       const uploadedUrls: string[] = [];
-      for (const imageUrl of imageUrls) { 
+      const imageId = imageUrls.predictionId;
+      //TODO: FIX THE STRUCTURE OF imageUrls => IT CONTAINS MULTIPLE URLS AND THEIR ID
+      //TODO:  FOR NOW WE GENERATE ONLY A SINGLE IMAGE SO THIS METHOD WORKS AS IT IS, LATER WE SHOULD MODIFY IT
+      for (const imageUrl of imageUrls.outputUrl) { 
+        //I SHOULD GET BOTH imageUrl.outputUrl AND imageUrl.
         try {
           const key = `${userId}/generatedImages/${Date.now()}.webp`;
           const response = await fetch(imageUrl);
@@ -216,7 +220,10 @@ export class ImageController {
           const getURL = await s3Client.getSignedUrlPromise("getObject", s3ParamsForGETURL);
           console.log("download url is", getURL);
           //TODO: make modelID dynamic
-          storeGeneratedImage(getURL,imageUrl,"22222",)
+          //TODO: ERROR HANDLING: EDGE CASES
+          //TODO: CREDIT DEDUCTION PENDING
+          const store = await storeGeneratedImage(getURL, imageUrl, "31c58651-e0a3-4ca1-a32e-0dad450f8171", imageId, userId, enhancedPrompt, "success", 1);
+          console.log("storing generated image:", store);
           uploadedUrls.push(getURL);
         } catch (err) {
           console.error("Error uploading image in bucket:", err);
