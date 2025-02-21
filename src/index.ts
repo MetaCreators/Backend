@@ -51,6 +51,7 @@ const s3Client = new aws.S3({
     secretAccessKey: process.env.DIGIOCEAN_OBJECT_SECRET || "" // Secret access key defined through an environment variable.
 });
 
+//app.options('*', cors(corsOptions)); this is for production ?
 app.use(cors(corsOptions));
 
 app.use(express.json());
