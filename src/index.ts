@@ -125,7 +125,8 @@ app.post("/thumbnail", authMiddleware, async (req: Request, res: Response) => {
 
 //TODO:abstract out properly => put the code in respective folders
 app.post("/api/imagefinetune", async (req, res) => {
-  //TODO: GET IMAGES AND USERID from the FE => SAVE TO DO => AND THEN SEND TO WORKERS FOR STARTING IMAGE TRAINING
+  //TODO:
+  // GET IMAGES AND USERID from the FE => SAVE TO DO => AND THEN SEND TO WORKERS FOR STARTING IMAGE TRAINING
   const { userid } = req.body;
   
   try {
