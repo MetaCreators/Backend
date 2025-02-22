@@ -127,7 +127,9 @@ app.post("/thumbnail", authMiddleware, async (req: Request, res: Response) => {
 app.post("/api/imagefinetune", async (req, res) => {
   //TODO:
   // GET IMAGES AND USERID from the FE => SAVE TO DO => AND THEN SEND TO WORKERS FOR STARTING IMAGE TRAINING
-  const { userid } = req.body;
+  //upload the zip file to Digital ocean bucket (have a route for getting the presigned urls) => then directly push to that url from frontend
+  const { userid, formData } = req.body;
+  console.log("form data is",userid)
   
   try {
     await client.lPush("training", JSON.stringify({ userid: userid }));
