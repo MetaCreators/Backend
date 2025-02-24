@@ -49,7 +49,7 @@ router.post(
 router.get(
   "/get-presignedurl-upload",
   async (req: Request, res: Response) => {
-    const { userId } = req.body;
+    const { userId } = req.query;
     //TODO: Frontend hits this route to just get the presigned url,
     // we just send it to FE, and from there we'll upload the images,
     // not from BE
