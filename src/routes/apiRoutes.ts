@@ -53,30 +53,18 @@ router.get(
     //TODO: Frontend hits this route to just get the presigned url,
     // we just send it to FE, and from there we'll upload the images,
     // not from BE
-
     const key = `${userId}/trainingImages/${Date.now()}.webp`;
-    const imageUrl="";
-    const response = await fetch(imageUrl); //what should this be ?
-    const arrayBuffer = await response.arrayBuffer();
-    const blob = Buffer.from(arrayBuffer);
     const s3Params = {
       Bucket: bucket,
       Key: key,
-      ContentType: "image/webp"
+      ContentType: "image/webp" //zip ?
     };
 
-    const uploadUrl = await s3Client.getSignedUrlPromise("putObject", s3Params);
-    console.log("presigned URl for saving training images is ", uploadUrl);
-    const uploading = await fetch(uploadUrl, {
-      method: "PUT",
-      body: blob,
-      headers: {
-        "Content-Type": s3Params.ContentType
-      }
-    });        
-    console.log("Image saving to DO status", uploading);
-
-
+    const presignedUrl = await s3Client.getSignedUrlPromise("putObject", s3Params);
+    console.log("presigned URl for saving training images is ", presignedUrl);
+    res.json({
+      presignedUrl:presignedUrl
+    })
   }
 );
 export default router;
