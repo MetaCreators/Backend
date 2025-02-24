@@ -50,6 +50,9 @@ router.get(
   "/get-presignedurl-upload",
   async (req: Request, res: Response) => {
     const { userId } = req.body;
+    //TODO: Frontend hits this route to just get the presigned url,
+    // we just send it to FE, and from there we'll upload the images,
+    // not from BE
 
     const key = `${userId}/trainingImages/${Date.now()}.webp`;
     const imageUrl="";
