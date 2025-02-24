@@ -53,11 +53,11 @@ router.get(
     //TODO: Frontend hits this route to just get the presigned url,
     // we just send it to FE, and from there we'll upload the images,
     // not from BE
-    const key = `${userId}/trainingImages/${Date.now()}.webp`;
+    const key = `${userId}/trainingImages/${Date.now()}.zip`;
     const s3Params = {
       Bucket: bucket,
       Key: key,
-      ContentType: "image/webp" //zip ?
+      ContentType: "application/zip" //zip ?
     };
 
     const presignedUrl = await s3Client.getSignedUrlPromise("putObject", s3Params);
