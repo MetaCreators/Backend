@@ -37,7 +37,7 @@ router.post("/description", authMiddleware, generateDescription);
 
 //router.post("/imagefinetune", authMiddleware, finetune);
 //TODO: Add middleware after testing
-//router.post("/imagefinetune" ,finetune);
+router.post("/imagefinetune" ,finetune);
 
 router.post(
   "/genpersonimage",
@@ -50,7 +50,6 @@ router.get(
   "/get-presignedurl-upload",
   async (req: Request, res: Response) => {
     const { userId } = req.query;
-    //TODO: Push userId to the worker, the worker can then access the user's bucket using his userID
     const key = `${userId}/trainingImages/${Date.now()}.zip`;
     const s3Params = {
       Bucket: bucket,
