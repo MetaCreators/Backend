@@ -195,36 +195,47 @@ export class ImageController {
           const arrayBuffer = await response.arrayBuffer();
           const blob = Buffer.from(arrayBuffer);
 
-          const s3Params = {
+          // const s3Params = {
+          //   Bucket: bucket,
+          //   Key: key,
+          //   ContentType: "image/webp",
+          //   ACL: 'public-read'
+          // };
+
+          // const uploadUrl = await s3Client.getSignedUrlPromise("putObject", s3Params);
+          // console.log("presigned URl is ", uploadUrl);
+          // const uploading = await fetch(uploadUrl, {
+          //   method: "PUT",
+          //   body: blob,
+          //   headers: {
+          //     "Content-Type": s3Params.ContentType
+          //   }
+          // });        
+          // console.log("Image saving to DO status", uploading);
+
+          // const s3ParamsForGETURL = {
+          //   Bucket: bucket,
+          //   Key: key
+          // };
+
+          // const getURL = await s3Client.getSignedUrlPromise("getObject", s3ParamsForGETURL);
+          await s3Client.putObject({
             Bucket: bucket,
             Key: key,
-            ContentType: "image/webp"
-          };
+            Body: blob,
+            ContentType: "image/webp",
+            ACL: 'public-read'
+          }).promise();
+          const publicUrl = `https://${bucket}.blr1.cdn.digitaloceanspaces.com/${key}`;
+          console.log("Public URL is", publicUrl);
 
-          const uploadUrl = await s3Client.getSignedUrlPromise("putObject", s3Params);
-          console.log("presigned URl is ", uploadUrl);
-          const uploading = await fetch(uploadUrl, {
-            method: "PUT",
-            body: blob,
-            headers: {
-              "Content-Type": s3Params.ContentType
-            }
-          });        
-          console.log("Image saving to DO status", uploading);
-
-          const s3ParamsForGETURL = {
-            Bucket: bucket,
-            Key: key
-          };
-
-          const getURL = await s3Client.getSignedUrlPromise("getObject", s3ParamsForGETURL);
-          console.log("download url is", getURL);
+//          console.log("download url is", getURL);
           //TODO: make modelID dynamic
           //TODO: ERROR HANDLING: EDGE CASES
           //TODO: CREDIT DEDUCTION PENDING
-          const store = await storeGeneratedImage(getURL, imageUrl, "31c58651-e0a3-4ca1-a32e-0dad450f8171", imageId, userId, enhancedPrompt, "success", 1);
+          const store = await storeGeneratedImage(publicUrl, imageUrl, "31c58651-e0a3-4ca1-a32e-0dad450f8171", imageId, userId, enhancedPrompt, "success", 1);
           console.log("storing generated image:", store);
-          uploadedUrls.push(getURL);
+          uploadedUrls.push(publicUrl);
         } catch (err) {
           console.error("Error uploading image in bucket:", err);
         }
