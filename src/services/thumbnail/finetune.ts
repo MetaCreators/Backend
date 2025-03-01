@@ -1,20 +1,18 @@
 import Replicate from "replicate";
 import { getRedisClient } from "./redis-client";
 
-
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN,
 });
 
 //input username should contain userId,username,Image url
 export async function finetune(req:any, res:any) {
-    const { userid } = req.body;
-
-    
+    const { userid,filename } = req.body;
     try {
         const client = await getRedisClient();
+        //BUG: our code is getting stuck here in creating new redis client
         //push the filename of training zip also along with userId
-        await client.lPush("training", JSON.stringify({ userid: userid }));
+        await client.lPush("training", JSON.stringify({ userid: userid,filename:filename }));
         res.json({message:`training received for userid ${userid}`});
     } catch (error) {
         console.error("Redis operation failed:", error);
