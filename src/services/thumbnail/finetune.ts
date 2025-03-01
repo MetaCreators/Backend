@@ -13,6 +13,7 @@ export async function finetune(req:any, res:any) {
     
     try {
         const client = await getRedisClient();
+        //push the filename of training zip also along with userId
         await client.lPush("training", JSON.stringify({ userid: userid }));
         res.json({message:`training received for userid ${userid}`});
     } catch (error) {
