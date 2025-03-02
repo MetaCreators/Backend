@@ -10,7 +10,6 @@ export async function finetune(req:any, res:any) {
     const { userid,filename } = req.body;
     try {
         const client = await getRedisClient();
-        //BUG: our code is getting stuck here in creating new redis client
         //push the filename of training zip also along with userId
         await client.lPush("training", JSON.stringify({ userid: userid, filename: filename }));
         console.log("reached here")
