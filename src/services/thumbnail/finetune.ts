@@ -12,7 +12,8 @@ export async function finetune(req:any, res:any) {
         const client = await getRedisClient();
         //BUG: our code is getting stuck here in creating new redis client
         //push the filename of training zip also along with userId
-        await client.lPush("training", JSON.stringify({ userid: userid,filename:filename }));
+        await client.lPush("training", JSON.stringify({ userid: userid, filename: filename }));
+        console.log("reached here")
         res.json({message:`training received for userid ${userid}`});
     } catch (error) {
         console.error("Redis operation failed:", error);
