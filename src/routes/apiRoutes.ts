@@ -59,6 +59,8 @@ router.get(
 
     const presignedUrl = await s3Client.getSignedUrlPromise("putObject", s3Params);
     console.log("presigned URl for saving training images is ", presignedUrl);
+    //BUG: Due to timelag in saving images to DO, there's a difference in names of the file => eg we put file name as
+    // 1740962927698.zip , but on digital ocean due to some delay, it gets saved as 1740962927679.zip
     res.json({
       presignedUrl:presignedUrl
     })
