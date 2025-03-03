@@ -7,13 +7,14 @@ const replicate = new Replicate({
 
 //input username should contain userId,username,Image url
 export async function finetune(req:any, res:any) {
-    const { userid,filename } = req.body;
+    const { userId, filename } = req.body;
+    console.log("userid is ", userId)
+    console.log("filenmae is",filename)
     try {
         const client = await getRedisClient();
-        //push the filename of training zip also along with userId
-        await client.lPush("training", JSON.stringify({ userid: userid, filename: filename }));
+        await client.lPush("training", JSON.stringify({ userid: userId, filename: filename }));
         console.log("reached here")
-        res.json({message:`training received for userid ${userid}`});
+        res.json({message:`training received for userid ${userId}`});
     } catch (error) {
         console.error("Redis operation failed:", error);
         res.status(500).json({error: "Failed to queue training job"});
