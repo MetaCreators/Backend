@@ -4,6 +4,7 @@ import { generateDescription } from "../services/description";
 import { authMiddleware } from "../middleware/auth";
 import { finetune } from "../services/thumbnail/finetune";
 import * as aws from "aws-sdk";
+import { v4 as uuidv4 } from "uuid";
 
 import {
   GeminiService,
@@ -50,7 +51,7 @@ router.get(
   "/get-presignedurl-upload",
   async (req: Request, res: Response) => {
     const { userId } = req.query;
-    const key = `${userId}/trainingImages/${Date.now()}.zip`;
+    const key = `${userId}/trainingImages/${uuidv4()}.zip`;
     const s3Params = {
       Bucket: bucket,
       Key: key,
