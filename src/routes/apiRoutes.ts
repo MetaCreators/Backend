@@ -4,7 +4,6 @@ import { generateDescription } from "../services/description";
 import { authMiddleware } from "../middleware/auth";
 import { finetune } from "../services/thumbnail/finetune";
 import * as aws from "aws-sdk";
-import { v4 as uuidv4 } from "uuid";
 
 import {
   GeminiService,
@@ -51,7 +50,7 @@ router.get(
   "/get-presignedurl-upload",
   async (req: Request, res: Response) => {
     const { userId } = req.query;
-    const key = `${userId}/trainingImages/${uuidv4()}.zip`;
+    const key = `${userId}/trainingImages/${Date.now()}.zip`;
     const s3Params = {
       Bucket: bucket,
       Key: key,
@@ -60,10 +59,9 @@ router.get(
 
     const presignedUrl = await s3Client.getSignedUrlPromise("putObject", s3Params);
     console.log("presigned URl for saving training images is ", presignedUrl);
-    //BUG: Due to timelag in saving images to DO, there's a difference in names of the file => eg we put file name as
-    // 1740962927698.zip , but on digital ocean due to some delay, it gets saved as 1740962927679.zip
     res.json({
-      presignedUrl:presignedUrl
+      presignedUrl: presignedUrl,
+      filename:key
     })
   }
 );
