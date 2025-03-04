@@ -56,7 +56,7 @@ router.get(
       Key: key,
       ContentType: "application/zip" 
     };
-
+    //this presignedUrl is for uploading zip files => wont open if you directly click on it
     const presignedUrl = await s3Client.getSignedUrlPromise("putObject", s3Params);
     console.log("presigned URl for saving training images is ", presignedUrl);
     res.json({
