@@ -70,7 +70,7 @@ router.post("/training-status", async (req: Request, res: Response) => {
   //TODO:
   //here,
   //1) update the training status in db
-  //2) save other necessary things in db
+  //2) save other necessary things in db => update the models list for user
   //3) What are other necessary items ??
 })
 export default router;
