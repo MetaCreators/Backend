@@ -3,6 +3,7 @@ import { generateScript } from "../services/script";
 import { generateDescription } from "../services/description";
 import { authMiddleware } from "../middleware/auth";
 import { finetune } from "../services/thumbnail/finetune";
+import * as aws from "aws-sdk";
 
 import {
   GeminiService,
@@ -19,6 +20,13 @@ const geminiService = new GeminiService(process.env.GEMINI_API_KEY as string);
 const replicateService = new ReplicateService(
   process.env.REPLICATE_API_KEY as string
 );
+const bucket = "lithouseuserimages";
+const digiendpoint = new aws.Endpoint("blr1.digitaloceanspaces.com");
+const s3Client = new aws.S3({
+    endpoint: digiendpoint, 
+    accessKeyId: process.env.DIGIOCEAN_OBJECT_ACCESS_ID || "" ,
+    secretAccessKey: process.env.DIGIOCEAN_OBJECT_SECRET || "" 
+});
 
 // Initialize controller
 const imageController = new ImageController(geminiService, replicateService);
@@ -29,7 +37,7 @@ router.post("/description", authMiddleware, generateDescription);
 
 //router.post("/imagefinetune", authMiddleware, finetune);
 //TODO: Add middleware after testing
-//router.post("/imagefinetune" ,finetune);
+router.post("/imagefinetune" ,finetune);
 
 router.post(
   "/genpersonimage",
@@ -38,4 +46,31 @@ router.post(
   }
 );
 
+router.get(
+  "/get-presignedurl-upload",
+  async (req: Request, res: Response) => {
+    const { userId } = req.query;
+    const key = `${userId}/trainingImages/${Date.now()}.zip`;
+    const s3Params = {
+      Bucket: bucket,
+      Key: key,
+      ContentType: "application/zip" 
+    };
+    //this presignedUrl is for uploading zip files => wont open if you directly click on it
+    const presignedUrl = await s3Client.getSignedUrlPromise("putObject", s3Params);
+    console.log("presigned URl for saving training images is ", presignedUrl);
+    res.json({
+      presignedUrl: presignedUrl,
+      filename:key
+    })
+  }
+);
+
+router.post("/training-status", async (req: Request, res: Response) => {
+  //TODO:
+  //here,
+  //1) update the training status in db
+  //2) save other necessary things in db => update the models list for user
+  //3) What are other necessary items ??
+})
 export default router;

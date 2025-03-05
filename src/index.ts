@@ -44,11 +44,9 @@ const corsOptions = {
 const bucket = "lithouseuserimages";
 const digiendpoint = new aws.Endpoint("blr1.digitaloceanspaces.com");
 const s3Client = new aws.S3({
-    endpoint: digiendpoint, // Find your endpoint in the control panel, under Settings. Prepend "https://".
-    //forcePathStyle: false, // Configures to use subdomain/virtual calling format.
-    //region: "blr1", // Must be "us-east-1" when creating new Spaces. Otherwise, use the region in your endpoint (for example, nyc3).
-    accessKeyId: process.env.DIGIOCEAN_OBJECT_ACCESS_ID || "" , // Access key pair. You can create access key pairs using the control panel or API.
-    secretAccessKey: process.env.DIGIOCEAN_OBJECT_SECRET || "" // Secret access key defined through an environment variable.
+    endpoint: digiendpoint,
+    accessKeyId: process.env.DIGIOCEAN_OBJECT_ACCESS_ID || "" ,
+    secretAccessKey: process.env.DIGIOCEAN_OBJECT_SECRET || "" 
 });
 
 //app.options('*', cors(corsOptions)); this is for production ?
@@ -124,20 +122,7 @@ app.post("/thumbnail", authMiddleware, async (req: Request, res: Response) => {
 });
 
 //TODO:abstract out properly => put the code in respective folders
-app.post("/api/imagefinetune", async (req, res) => {
-  //TODO: GET IMAGES AND USERID from the FE => SAVE TO DO => AND THEN SEND TO WORKERS FOR STARTING IMAGE TRAINING
-  const { userid } = req.body;
-  
-  try {
-    await client.lPush("training", JSON.stringify({ userid: userid }));
-    res.json({message:`training received for userid ${userid}`}) 
-  } catch (error) {
-    res.json({
-      message:"training input failed",
-      error:error
-    })
-  } 
-});
+
 
 app.post("/upload", async (req, res) => {
   //TODO:
