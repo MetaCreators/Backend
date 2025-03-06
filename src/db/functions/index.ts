@@ -45,7 +45,7 @@ async function getAllUserStoredImageData() {
 }
 
 //store user's new model on training complete => createNewUserModel("4c5adfad-5a24-4de4-ae1c-046f13559ab4", "success");
-async function createNewUserModel(userId:string,status:"pending" | "success" | "failed") {
+export async function createNewUserModel(userId:string,status:"pending" | "success" | "failed") {
     // yaha model ayega
      const response = await db.insert(models).values({
         status: status,//indicates whether saving to cloud was successful or not
@@ -58,7 +58,7 @@ async function createNewUserModel(userId:string,status:"pending" | "success" | "
 }
 
 //update training status upon completion => example usage: updateModelTrainingStatus("failed","0f513bf9-7e63-4ea2-9314-f88621756ed5")
-async function updateModelTrainingStatus(status:"pending" | "success" | "failed", modelId:string) {
+export async function updateModelTrainingStatus(status:"pending" | "success" | "failed", modelId:string) {
     const response = await db.update(models).set({
         status:status
     }).where(eq(models.id,modelId)).returning({
