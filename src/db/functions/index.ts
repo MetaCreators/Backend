@@ -58,6 +58,7 @@ export async function createNewUserModel(userId:string,status:"pending" | "succe
 }
 
 //update training status upon completion => example usage: updateModelTrainingStatus("failed","0f513bf9-7e63-4ea2-9314-f88621756ed5")
+// status values can be "canceled" || "processing" || "failed" || "starting" || "succeeded" => need to change this in the db
 export async function updateModelTrainingStatus(status:"pending" | "success" | "failed", modelId:string) {
     const response = await db.update(models).set({
         status:status
