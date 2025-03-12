@@ -1,7 +1,7 @@
 import { getRedisClient } from "./redis-client";
 import { db } from "../../db/db";
-import { eq } from "drizzle-orm";
-import { trainingImages } from "../../db/schema";
+import { and, eq } from "drizzle-orm";
+import { models, trainingImages, ModelTrainingStatusEnum } from "../../db/schema";
 
 
 //input username should contain userId,username,Image url
@@ -10,6 +10,13 @@ export async function finetune(req: any, res: any) {
     console.log("userid is ", userId)
     console.log("filenmae is", filename)
     try {
+        const response = await db.insert(trainingImages).values({
+            userId: userId,
+            cloudUrl: filename,
+            status: "success" //TODO: Better handling of status => send status from frontend
+        });
+        console.log("filename save status for userid", userId, "with filename", filename, "is", response);
+
         const client = await getRedisClient();
         await client.lPush("training", JSON.stringify({ userid: userId, filename: filename }));
         console.log("reached here")
@@ -28,24 +35,47 @@ async function setupTrainingStatusSubscription() {
         await subscriber.subscribe('TRAINING_STATUS', async (message: string) => {
             try {
                 const trainingStatus = JSON.parse(message);
-                //use this filename to update the status in the database (update where filename = filename)
-                const { userId, filename, status } = trainingStatus;
+                const { userId, filename, status, modelId } = trainingStatus;
 
-                // Update the training status in the database
-                await db.update(trainingImages)
-                    .set({
-                        status: status
-                    })
+                const modelStatus = status as "canceled" | "processing" | "failed" | "starting" | "succeeded";
+
+                const existingModel = await db.select()
+                    .from(models)
                     .where(
-                        eq(trainingImages.userId, userId)
-                    );
+                        and(
+                            eq(models.userId, userId),
+                            eq(models.replicateModelId, modelId)
+                        )
+                    )
+                    .limit(1);
 
-                console.log(`Updated training status for user ${userId}: ${status}`);
+                if (existingModel.length === 0) {
+                    await db.insert(models).values({
+                        userId: userId,
+                        replicateModelId: modelId,
+                        status: modelStatus,
+                    });
+                    console.log(`Created new model for user ${userId} with modelId ${modelId}`);
+                } else {
+                    const now = new Date();
+                    await db.update(models)
+                        .set({
+                            status: modelStatus,
+                            updatedAt: now
+                        })
+                        .where(
+                            and(
+                                eq(models.userId, userId),
+                                eq(models.replicateModelId, modelId)
+                            )
+                        );
+                }
+
+                console.log(`Updated training status for user ${userId}, file ${filename}: ${modelStatus}`);
             } catch (error) {
                 console.error('Error processing training status update:', error);
             }
         });
-
         console.log('Successfully subscribed to TRAINING_STATUS channel');
     } catch (error) {
         console.error('Error setting up Redis subscription:', error);
