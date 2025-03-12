@@ -1,4 +1,4 @@
-import { getRedisClient } from "./redis-client";
+import { getRedisClient, getRedisSubscriber } from "./redis-client";
 import { db } from "../../db/db";
 import { and, eq } from "drizzle-orm";
 import { models, trainingImages, ModelTrainingStatusEnum } from "../../db/schema";
@@ -17,6 +17,7 @@ export async function finetune(req: any, res: any) {
         });
         console.log("filename save status for userid", userId, "with filename", filename, "is", response);
 
+        // Use regular Redis client for LPUSH operation
         const client = await getRedisClient();
         await client.lPush("training", JSON.stringify({ userid: userId, filename: filename }));
         console.log("reached here")
@@ -30,12 +31,31 @@ export async function finetune(req: any, res: any) {
 // Set up Redis subscription for training status updates
 async function setupTrainingStatusSubscription() {
     try {
-        const subscriber = await getRedisClient();
+        // Use subscriber client for pub/sub operations
+        const subscriber = await getRedisSubscriber();
 
         await subscriber.subscribe('TRAINING_STATUS', async (message: string) => {
             try {
                 const trainingStatus = JSON.parse(message);
                 const { userId, filename, status, modelId } = trainingStatus;
+
+                // Validate required fields
+                if (!userId || !status || !modelId) {
+                    console.error('Missing required fields in training status message:', {
+                        userId,
+                        status,
+                        modelId,
+                        filename
+                    });
+                    return;
+                }
+
+                // Validate status value
+                const validStatuses = ["canceled", "processing", "failed", "starting", "succeeded"];
+                if (!validStatuses.includes(status)) {
+                    console.error(`Invalid status value received: ${status}`);
+                    return;
+                }
 
                 const modelStatus = status as "canceled" | "processing" | "failed" | "starting" | "succeeded";
 
@@ -71,9 +91,12 @@ async function setupTrainingStatusSubscription() {
                         );
                 }
 
-                console.log(`Updated training status for user ${userId}, file ${filename}: ${modelStatus}`);
+                console.log(`Updated training status for user ${userId}, file ${filename}: ${modelStatus}, modelId: ${modelId}`);
             } catch (error) {
                 console.error('Error processing training status update:', error);
+                if (error instanceof SyntaxError) {
+                    console.error('Invalid JSON message received:', message);
+                }
             }
         });
         console.log('Successfully subscribed to TRAINING_STATUS channel');
