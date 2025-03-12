@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import { integer, pgEnum, pgTable, text, timestamp, unique, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 
 export const StatusEnum = pgEnum("status", ["pending", "success", "failed"]);
+export const ModelTrainingStatusEnum = pgEnum("trainingStatus", ["canceled", "processing", "failed" , "starting" , "succeeded"]);
 
 export const UserTable = pgTable('users', {
     id: uuid("id").primaryKey().defaultRandom(),
@@ -34,7 +35,7 @@ export const models = pgTable('models', {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id").references(() => UserTable.id).notNull(),
     replicateModelId: varchar("replicate_model_id", { length: 512 }).unique(),
-    status: StatusEnum("status"),
+    status: ModelTrainingStatusEnum("trainingStatus"), //TODO: need to change this to accept  "canceled" || "processing" || "failed" || "starting" || "succeeded"
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull()
 });

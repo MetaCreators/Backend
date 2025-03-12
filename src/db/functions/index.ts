@@ -4,12 +4,12 @@ import { generatedImages, models, trainingImages, UserTable } from "../schema";
 import "dotenv/config"
 
 // create new user upon signup => example usage: createNewUser("yash9","yash9@gmail.com")
-async function createNewUser(name:string,email:string) {
+async function createNewUser(name: string, email: string) {
     const newUser = await db.insert(UserTable).values({
         name: name,
         email: email
     }).returning({
-      id:UserTable.id  
+        id: UserTable.id
     })
     console.log(newUser)
     //await getAllUsers()
@@ -25,13 +25,13 @@ async function getAllUsers() {
 
 // store user sent training images to cloud (get cloud url and then store it in db) =>
 //example usage: storeUserTrainingImage("4c5adfad-5a24-4de4-ae1c-046f13559ab4", "aws.com/random", "success");
-async function storeUserTrainingImage(userId:string,cloudUrl:string,status:"pending" | "success" | "failed") {
+async function storeUserTrainingImage(userId: string, cloudUrl: string, status: "pending" | "success" | "failed") {
     const response = await db.insert(trainingImages).values({
         status: status,//indicates whether saving to cloud was successful or not
         userId: userId,
-        cloudUrl:cloudUrl
+        cloudUrl: cloudUrl
     }).returning({
-        id:trainingImages.id
+        id: trainingImages.id
     })
     console.log(response);
     return response
@@ -45,24 +45,25 @@ async function getAllUserStoredImageData() {
 }
 
 //store user's new model on training complete => createNewUserModel("4c5adfad-5a24-4de4-ae1c-046f13559ab4", "success");
-async function createNewUserModel(userId:string,status:"pending" | "success" | "failed") {
+export async function createNewUserModel(userId: string, status: "canceled" | "processing" | "failed" | "starting" | "succeeded") {
     // yaha model ayega
-     const response = await db.insert(models).values({
+    const response = await db.insert(models).values({
         status: status,//indicates whether saving to cloud was successful or not
         userId: userId,
     }).returning({
-        id:models.id
+        id: models.id
     })
     console.log(response);
     return response
 }
 
 //update training status upon completion => example usage: updateModelTrainingStatus("failed","0f513bf9-7e63-4ea2-9314-f88621756ed5")
-async function updateModelTrainingStatus(status:"pending" | "success" | "failed", modelId:string) {
+// status values can be "canceled" || "processing" || "failed" || "starting" || "succeeded" => need to change this in the db
+export async function updateModelTrainingStatus(status: "canceled" | "processing" | "failed" | "starting" | "succeeded", modelId: string) {
     const response = await db.update(models).set({
-        status:status
-    }).where(eq(models.id,modelId)).returning({
-        id:models.id
+        status: status
+    }).where(eq(models.id, modelId)).returning({
+        id: models.id
     })
     console.log(response);
     return response
@@ -76,14 +77,14 @@ async function getAllModelsData() {
 }
 
 //get a User's Models => example usage: getUserModels("4c5adfad-5a24-4de4-ae1c-046f13559ab4")
-async function getUserModels(userId:string) {
-    const allModels = await db.select().from(models).where(eq(models.userId,userId));
+async function getUserModels(userId: string) {
+    const allModels = await db.select().from(models).where(eq(models.userId, userId));
     console.log(allModels);
     return allModels;
 }
 
 //store user's new generated Image => example usage: storeGeneratedImage("aws/storage","replicateURL","0f513bf9-7e63-4ea2-9314-f88621756ed5","replicateImgId","4c5adfad-5a24-4de4-ae1c-046f13559ab4","some random prompt","success",5)
-export async function storeGeneratedImage(cloudUrl:string,replicateUrl:string,modelId:string,replicateImageId:string,userId:string,prompt:string,status:"pending" | "success" | "failed",creditsUsed:number) {
+export async function storeGeneratedImage(cloudUrl: string, replicateUrl: string, modelId: string, replicateImageId: string, userId: string, prompt: string, status: "pending" | "success" | "failed", creditsUsed: number) {
     const response = await db.insert(generatedImages).values({
         status: status,//indicates whether saving to cloud was successful or not
         userId: userId,
@@ -94,13 +95,13 @@ export async function storeGeneratedImage(cloudUrl:string,replicateUrl:string,mo
         prompt,
         creditsUsed
     }).returning({
-        id:trainingImages.id
+        id: trainingImages.id
     })
     console.log(response);
     return response
 }
 // get user images => example usage: getUserGeneratedImages("4c5adfad-5a24-4de4-ae1c-046f13559ab4","0f513bf9-7e63-4ea2-9314-f88621756ed5")
-async function getUserGeneratedImages(userId:string,modelId:string) {
+async function getUserGeneratedImages(userId: string, modelId: string) {
     const user = await db.query.generatedImages.findMany({
         columns: { cloudUrl: true, id: true },
         where: and(
@@ -114,11 +115,11 @@ async function getUserGeneratedImages(userId:string,modelId:string) {
 
 // add credits to user when he pays
 async function addUserCredits() {
-    
+
 }
 
 // deduct credit when he generates image
-async function deductUserCredits(userId:string,deduction:number) {
+async function deductUserCredits(userId: string, deduction: number) {
     const userCredits = await getUserCredits(userId);
     //handle insufficient credits case here
     if (!userCredits) {
@@ -127,14 +128,14 @@ async function deductUserCredits(userId:string,deduction:number) {
     await db.update(UserTable).set({
         availableCreds: userCredits - deduction
     }).where(eq(UserTable.id, userId));
-    
+
     console.log(getUserCredits(userId));
 }
 
 //Example usage: deductUserCredits("01f90e3d-171d-4313-8985-f25ccd5cd915", 10);
 
 // get user credits
-async function getUserCredits(userId:string) {
+async function getUserCredits(userId: string) {
     const user = await db.select().from(UserTable).where(eq(UserTable.id, userId));
     console.log(user);
     return user.length > 0 ? user[0].availableCreds : null;
@@ -143,9 +144,9 @@ async function getUserCredits(userId:string) {
 //EXTRA FUNCTIONS:
 
 //update username/details
-async function updateUserName(email:string,newName:string) {
+async function updateUserName(email: string, newName: string) {
     const user = await db.update(UserTable).set({
-        name:newName
+        name: newName
     }).where(eq(UserTable.email, email))
     const allusers = await db.select().from(UserTable)
     console.log(allusers)
