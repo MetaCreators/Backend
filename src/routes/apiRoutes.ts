@@ -75,7 +75,6 @@ router.post("/training-status", async (req: Request, res: Response) => {
   //3) What are other necessary items ??
 })
 
-//TODO: NOT WORKING
 router.post("/signup", async (req: Request, res: Response) => {
   const { email } = req.body;
   console.log("reached here")
