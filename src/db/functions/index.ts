@@ -4,7 +4,7 @@ import { generatedImages, models, trainingImages, UserTable } from "../schema";
 import "dotenv/config"
 
 // create new user upon signup => example usage: createNewUser("yash9","yash9@gmail.com")
-async function createNewUser(name: string, email: string) {
+export async function createNewUser(name: string, email: string) {
     const newUser = await db.insert(UserTable).values({
         name: name,
         email: email
