@@ -114,7 +114,7 @@ export async function storeGeneratedImage(cloudUrl: string, replicateUrl: string
     return response
 }
 // get user images => example usage: getUserGeneratedImages("4c5adfad-5a24-4de4-ae1c-046f13559ab4","0f513bf9-7e63-4ea2-9314-f88621756ed5")
-async function getUserGeneratedImages(userId: string, modelId: string) {
+export async function getUserGeneratedImages(userId: string, modelId: string) {
     const user = await db.query.generatedImages.findMany({
         columns: { cloudUrl: true, id: true },
         where: and(
