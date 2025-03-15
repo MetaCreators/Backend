@@ -2,12 +2,13 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import Replicate from "replicate";
 import { Request, Response } from "express";
 import * as aws from "aws-sdk";
-import { storeGeneratedImage } from "../../db/functions";
+import { deductUserCredits, storeGeneratedImage } from "../../db/functions";
 
 // Constants
 const TRIGGER_WORD = "Shikhar";
 const DEFAULT_ASPECT_RATIO = "16:9";
 const DEFAULT_NUM_OUTPUTS = 1;
+const COST_PER_GENERATION = 10;
 const DEFAULT_STEPS = 40;
 
 const DEFAULT_GEMINI_CONFIG = {
@@ -20,9 +21,9 @@ const DEFAULT_GEMINI_CONFIG = {
 const bucket = "lithouseuserimages";
 const digiendpoint = new aws.Endpoint("blr1.digitaloceanspaces.com");
 const s3Client = new aws.S3({
-    endpoint: digiendpoint, 
-    accessKeyId: process.env.DIGIOCEAN_OBJECT_ACCESS_ID || "" ,
-    secretAccessKey: process.env.DIGIOCEAN_OBJECT_SECRET || "" 
+  endpoint: digiendpoint,
+  accessKeyId: process.env.DIGIOCEAN_OBJECT_ACCESS_ID || "",
+  secretAccessKey: process.env.DIGIOCEAN_OBJECT_SECRET || "",
 });
 
 export class GeminiService {
@@ -90,7 +91,7 @@ export class ReplicateService {
     this.outputDir = outputDir;
   }
 
-//TODO: FIX THE OUTPUT OF generateImage TO RETURN BOTH PREDICTION ID AND PREDICTION URL, AND THEN SEND THE ID TO storeGeneratedImage
+  //TODO: FIX THE OUTPUT OF generateImage TO RETURN BOTH PREDICTION ID AND PREDICTION URL, AND THEN SEND THE ID TO storeGeneratedImage
   async generateImage(prompt: string): Promise<GenerateImageProps> {
     try {
       const input = {
@@ -112,20 +113,21 @@ export class ReplicateService {
       console.log("Sending request to Replicate API with input:", input);
 
       const prediction = await this.replicate.predictions.create({
-        version: "925da5f563c07bb620a3bf3cc2185079b1cfc7d62f47a9c234e67dbc36eab738",
+        version:
+          "925da5f563c07bb620a3bf3cc2185079b1cfc7d62f47a9c234e67dbc36eab738",
         input: input,
-        wait: true
+        wait: true,
       });
 
       const predictionId = prediction.id;
       const outputUrl = prediction.output;
       console.log("prediction id is", predictionId);
       console.log("prediction url is", outputUrl);
-      
+
       if (Array.isArray(prediction.output)) {
         return {
           predictionId,
-          outputUrl
+          outputUrl,
         };
       }
 
@@ -146,7 +148,7 @@ interface GenerateImageRequest {
 
 interface GenerateImageProps {
   predictionId: string;
-  outputUrl: string[]
+  outputUrl: string[];
 }
 export class ImageController {
   private geminiService: GeminiService;
@@ -187,7 +189,7 @@ export class ImageController {
       const imageId = imageUrls.predictionId;
       //TODO: FIX THE STRUCTURE OF imageUrls => IT CONTAINS MULTIPLE URLS AND THEIR ID
       //TODO:  FOR NOW WE GENERATE ONLY A SINGLE IMAGE SO THIS METHOD WORKS AS IT IS, LATER WE SHOULD MODIFY IT
-      for (const imageUrl of imageUrls.outputUrl) { 
+      for (const imageUrl of imageUrls.outputUrl) {
         //I SHOULD GET BOTH imageUrl.outputUrl AND imageUrl.
         try {
           const key = `${userId}/generatedImages/${Date.now()}.webp`;
@@ -210,7 +212,7 @@ export class ImageController {
           //   headers: {
           //     "Content-Type": s3Params.ContentType
           //   }
-          // });        
+          // });
           // console.log("Image saving to DO status", uploading);
 
           // const s3ParamsForGETURL = {
@@ -219,27 +221,42 @@ export class ImageController {
           // };
 
           // const getURL = await s3Client.getSignedUrlPromise("getObject", s3ParamsForGETURL);
-          await s3Client.putObject({
-            Bucket: bucket,
-            Key: key,
-            Body: blob,
-            ContentType: "image/webp",
-            ACL: 'public-read'
-          }).promise();
+          await s3Client
+            .putObject({
+              Bucket: bucket,
+              Key: key,
+              Body: blob,
+              ContentType: "image/webp",
+              ACL: "public-read",
+            })
+            .promise();
           const publicUrl = `https://${bucket}.blr1.cdn.digitaloceanspaces.com/${key}`;
           console.log("Public URL is", publicUrl);
 
-//          console.log("download url is", getURL);
+          //          console.log("download url is", getURL);
           //TODO: make modelID dynamic
           //TODO: ERROR HANDLING: EDGE CASES
           //TODO: CREDIT DEDUCTION PENDING
-          const store = await storeGeneratedImage(publicUrl, imageUrl, "31c58651-e0a3-4ca1-a32e-0dad450f8171", imageId, userId, enhancedPrompt, "success", 1);
+          const store = await storeGeneratedImage(
+            publicUrl,
+            imageUrl,
+            "31c58651-e0a3-4ca1-a32e-0dad450f8171",
+            imageId,
+            userId,
+            enhancedPrompt,
+            "success",
+            1
+          );
           console.log("storing generated image:", store);
           uploadedUrls.push(publicUrl);
+
+          //deudcting user credits for each generation
+          const deduction = DEFAULT_NUM_OUTPUTS * COST_PER_GENERATION;
+          await deductUserCredits(userId, deduction);
         } catch (err) {
           console.error("Error uploading image in bucket:", err);
         }
-      } 
+      }
       res.json({ urls: uploadedUrls });
     } catch (error) {
       console.error("Error in image generation:", error);
