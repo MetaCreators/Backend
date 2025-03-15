@@ -12,7 +12,7 @@ import {
 } from "../services/thumbnail/genpersonimage";
 
 import dotenv from "dotenv";
-import { checkUserExists, createNewUser } from "../db/functions";
+import { checkUserExists, createNewUser, getUserGeneratedImages } from "../db/functions";
 
 const router = Router();
 dotenv.config();
@@ -102,6 +102,16 @@ router.post('/user/check', async (req: Request, res: Response) => {
     res.json({ user });
   } catch (error) {
     res.status(500).json({ error: 'Failed to check user existence' });
+  }
+});
+
+router.post('/user/getgeneratedimages', async (req: Request, res: Response) => {
+  const { userId, modelId } = req.body;
+  try {
+    const images = await getUserGeneratedImages(userId, modelId);
+    res.json({ images });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get user generated images' });
   }
 });
 export default router;
