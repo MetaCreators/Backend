@@ -5,15 +5,23 @@ import "dotenv/config"
 
 // create new user upon signup => example usage: createNewUser("yash9","yash9@gmail.com")
 export async function createNewUser(name: string, email: string) {
-    const newUser = await db.insert(UserTable).values({
-        name: name,
-        email: email
-    }).returning({
-        id: UserTable.id
-    })
-    console.log(newUser)
-    //await getAllUsers()
-    //await getAllTrainingData()
+    try {
+        const existingUser = await db.select().from(UserTable).where(eq(UserTable.email, email));
+        if (existingUser.length > 0) {
+            throw new Error("User with this email already exists");
+        }
+        const newUser = await db.insert(UserTable).values({
+            name: name,
+            email: email
+        }).returning({
+            id: UserTable.id
+        });
+        console.log(newUser);
+        return newUser;
+    } catch (error) {
+        console.error("Error creating new user:", error);
+        throw error;
+    }
 }
 
 //get all users => example usage: getAllUsers()
@@ -21,6 +29,11 @@ async function getAllUsers() {
     const users = await db.select().from(UserTable);
     console.log(users);
     return users;
+}
+
+export async function checkUserExists(email: string) {
+    const user = await db.select().from(UserTable).where(eq(UserTable.email, email));
+    return user.length > 0;
 }
 
 // store user sent training images to cloud (get cloud url and then store it in db) =>

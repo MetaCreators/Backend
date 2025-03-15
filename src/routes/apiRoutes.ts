@@ -12,7 +12,7 @@ import {
 } from "../services/thumbnail/genpersonimage";
 
 import dotenv from "dotenv";
-import { createNewUser } from "../db/functions";
+import { checkUserExists, createNewUser } from "../db/functions";
 
 const router = Router();
 dotenv.config();
@@ -77,12 +77,31 @@ router.post("/training-status", async (req: Request, res: Response) => {
 
 router.post("/signup", async (req: Request, res: Response) => {
   const { email } = req.body;
-  console.log("reached here")
-  await createNewUser("newuser_" + Date.now(), email);
-  res.json({
-    message: "New User created successfully"
-  })
-  //TODO:
-  // fix the username part above
-})
+  try {
+    await createNewUser("newuser_" + Date.now(), email);
+    res.json({
+      message: "New User created successfully"
+    });
+  } catch (error: any) {
+    if (error.message === "User with this email already exists") {
+      res.json({
+        message: "User already exists"
+      });
+    } else {
+      res.status(500).json({
+        error: error.message
+      });
+    }
+  }
+});
+
+router.post('/user/check', async (req: Request, res: Response) => {
+  const { email } = req.body;
+  try {
+    const user = await checkUserExists(email);
+    res.json({ user });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to check user existence' });
+  }
+});
 export default router;
