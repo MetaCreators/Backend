@@ -12,6 +12,7 @@ import {
 } from "../services/thumbnail/genpersonimage";
 
 import dotenv from "dotenv";
+import { checkUserExists, createNewUser, getUserGeneratedImages } from "../db/functions";
 
 const router = Router();
 dotenv.config();
@@ -23,9 +24,9 @@ const replicateService = new ReplicateService(
 const bucket = "lithouseuserimages";
 const digiendpoint = new aws.Endpoint("blr1.digitaloceanspaces.com");
 const s3Client = new aws.S3({
-    endpoint: digiendpoint, 
-    accessKeyId: process.env.DIGIOCEAN_OBJECT_ACCESS_ID || "" ,
-    secretAccessKey: process.env.DIGIOCEAN_OBJECT_SECRET || "" 
+  endpoint: digiendpoint,
+  accessKeyId: process.env.DIGIOCEAN_OBJECT_ACCESS_ID || "",
+  secretAccessKey: process.env.DIGIOCEAN_OBJECT_SECRET || ""
 });
 
 // Initialize controller
@@ -37,7 +38,7 @@ router.post("/description", authMiddleware, generateDescription);
 
 //router.post("/imagefinetune", authMiddleware, finetune);
 //TODO: Add middleware after testing
-router.post("/imagefinetune" ,finetune);
+router.post("/imagefinetune", finetune);
 
 router.post(
   "/genpersonimage",
@@ -54,14 +55,14 @@ router.get(
     const s3Params = {
       Bucket: bucket,
       Key: key,
-      ContentType: "application/zip" 
+      ContentType: "application/zip"
     };
     //this presignedUrl is for uploading zip files => wont open if you directly click on it
     const presignedUrl = await s3Client.getSignedUrlPromise("putObject", s3Params);
     console.log("presigned URl for saving training images is ", presignedUrl);
     res.json({
       presignedUrl: presignedUrl,
-      filename:key
+      filename: key
     })
   }
 );
@@ -73,4 +74,44 @@ router.post("/training-status", async (req: Request, res: Response) => {
   //2) save other necessary things in db => update the models list for user
   //3) What are other necessary items ??
 })
+
+router.post("/signup", async (req: Request, res: Response) => {
+  const { email } = req.body;
+  try {
+    await createNewUser("newuser_" + Date.now(), email);
+    res.json({
+      message: "New User created successfully"
+    });
+  } catch (error: any) {
+    if (error.message === "User with this email already exists") {
+      res.json({
+        message: "User already exists"
+      });
+    } else {
+      res.status(500).json({
+        error: error.message
+      });
+    }
+  }
+});
+
+router.post('/user/check', async (req: Request, res: Response) => {
+  const { email } = req.body;
+  try {
+    const user = await checkUserExists(email);
+    res.json({ user });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to check user existence' });
+  }
+});
+
+router.post('/user/getgeneratedimages', async (req: Request, res: Response) => {
+  const { userId, modelId } = req.body;
+  try {
+    const images = await getUserGeneratedImages(userId, modelId);
+    res.json({ images });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get user generated images' });
+  }
+});
 export default router;

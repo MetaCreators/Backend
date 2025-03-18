@@ -4,19 +4,25 @@ import { generatedImages, models, trainingImages, UserTable } from "../schema";
 import "dotenv/config";
 
 // create new user upon signup => example usage: createNewUser("yash9","yash9@gmail.com")
-async function createNewUser(name: string, email: string) {
-  const newUser = await db
-    .insert(UserTable)
-    .values({
-      name: name,
-      email: email,
-    })
-    .returning({
-      id: UserTable.id,
-    });
-  console.log(newUser);
-  //await getAllUsers()
-  //await getAllTrainingData()
+
+export async function createNewUser(name: string, email: string) {
+    try {
+        const existingUser = await db.select().from(UserTable).where(eq(UserTable.email, email));
+        if (existingUser.length > 0) {
+            throw new Error("User with this email already exists");
+        }
+        const newUser = await db.insert(UserTable).values({
+            name: name,
+            email: email
+        }).returning({
+            id: UserTable.id
+        });
+        console.log(newUser);
+        return newUser;
+    } catch (error) {
+        console.error("Error creating new user:", error);
+        throw error;
+    }
 }
 
 //get all users => example usage: getAllUsers()
@@ -24,6 +30,11 @@ async function getAllUsers() {
   const users = await db.select().from(UserTable);
   console.log(users);
   return users;
+}
+
+export async function checkUserExists(email: string) {
+    const user = await db.select().from(UserTable).where(eq(UserTable.email, email));
+    return user.length > 0;
 }
 
 // store user sent training images to cloud (get cloud url and then store it in db) =>
@@ -139,16 +150,17 @@ export async function storeGeneratedImage(
   return response;
 }
 // get user images => example usage: getUserGeneratedImages("4c5adfad-5a24-4de4-ae1c-046f13559ab4","0f513bf9-7e63-4ea2-9314-f88621756ed5")
-async function getUserGeneratedImages(userId: string, modelId: string) {
-  const user = await db.query.generatedImages.findMany({
-    columns: { cloudUrl: true, id: true },
-    where: and(
-      eq(generatedImages.userId, userId),
-      eq(generatedImages.modelId, modelId)
-    ),
-  });
-  console.log(user);
-  return user;
+
+export async function getUserGeneratedImages(userId: string, modelId: string) {
+    const user = await db.query.generatedImages.findMany({
+        columns: { cloudUrl: true, id: true },
+        where: and(
+            eq(generatedImages.userId, userId),
+            eq(generatedImages.modelId, modelId)
+        )
+    })
+    console.log(user);
+    return user;
 }
 
 // add credits to user when he pays

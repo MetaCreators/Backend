@@ -2,11 +2,11 @@ import { relations } from "drizzle-orm";
 import { integer, pgEnum, pgTable, text, timestamp, unique, uniqueIndex, uuid, varchar } from "drizzle-orm/pg-core";
 
 export const StatusEnum = pgEnum("status", ["pending", "success", "failed"]);
-export const ModelTrainingStatusEnum = pgEnum("trainingStatus", ["canceled", "processing", "failed" , "starting" , "succeeded"]);
+export const ModelTrainingStatusEnum = pgEnum("trainingStatus", ["canceled", "processing", "failed", "starting", "succeeded"]);
 
 export const UserTable = pgTable('users', {
     id: uuid("id").primaryKey().defaultRandom(),
-    name: varchar("name", {length:255}).notNull(), 
+    name: varchar("name", { length: 255 }).notNull(),
     email: varchar('email', { length: 255 }).notNull().unique(),
     availableCreds: integer("available_credits").notNull().default(0),
     totalMoneyPaid: integer("totalMoneyPaidUSD").default(0),
@@ -15,7 +15,7 @@ export const UserTable = pgTable('users', {
 }, table => {
     return {
         emailIndex: uniqueIndex("emailIndex").on(table.email),
-        uniqueEmailAndCreds: unique("uniqueEmailAndCreds").on(table.email,table.availableCreds)
+        uniqueEmail: unique("uniqueEmail").on(table.email)
     }
 });
 
@@ -23,7 +23,7 @@ export const UserTable = pgTable('users', {
 //url will be something like => aws.s3.com/storage/{userId}/trainingImages/{imgId}
 export const trainingImages = pgTable('training_images', {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id").references(()=>UserTable.id).notNull(),
+    userId: uuid("user_id").references(() => UserTable.id).notNull(),
     cloudUrl: varchar("cloud_url", { length: 512 }),
     status: StatusEnum("status"),
     createdAt: timestamp("created_at").defaultNow().notNull()
@@ -54,7 +54,7 @@ export const generatedImages = pgTable('generatedImages', {
     creditsUsed: integer("credits_used").notNull()
 });
 
-export const CredChangeReason = pgEnum("reason",["image_gen_debit","topup","package_purchase"]) //we might have to add new_model_train here in future?
+export const CredChangeReason = pgEnum("reason", ["image_gen_debit", "topup", "package_purchase"]) //we might have to add new_model_train here in future?
 
 export const creditTransactions = pgTable('credit_transactions', {
     id: uuid("id").primaryKey().defaultRandom(),
