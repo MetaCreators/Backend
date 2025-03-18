@@ -4,6 +4,7 @@ import { generateDescription } from "../services/description";
 import { authMiddleware } from "../middleware/auth";
 import { finetune } from "../services/thumbnail/finetune";
 import * as aws from "aws-sdk";
+import crypto from "crypto";
 
 import {
   GeminiService,
@@ -13,6 +14,7 @@ import {
 
 import dotenv from "dotenv";
 import { checkUserExists, createNewUser, getUserGeneratedImages } from "../db/functions";
+import { getRazorpayInstance } from "../services/razorpay/razorpay";
 
 const router = Router();
 dotenv.config();
@@ -114,4 +116,89 @@ router.post('/user/getgeneratedimages', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to get user generated images' });
   }
 });
+
+router.post('/payment', async (req: Request, res: Response) => {
+
+  try {
+    const razorpayInstance = await getRazorpayInstance();
+    const options = {
+      amount: 5000,
+      currency: "INR",
+      receipt: "receipt_order_7700000000000000000000",
+    };
+    const order = await razorpayInstance.orders.create(options);
+    res.json({ order });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: 'Failed to create order' });
+  }
+});
+
+router.post('/razorpay/create-order', async (req: Request, res: Response) => {
+  try {
+    const razorpayInstance = await getRazorpayInstance();
+    const options = {
+      amount: 100, // Amount in paise (₹500)
+      currency: "INR",
+      receipt: `receipt_${Date.now()}`,
+      notes: {
+        userId: req.body.userId // Add userId to track which user made the payment
+      }
+    };
+    const order = await razorpayInstance.orders.create(options);
+    res.json({
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency
+    });
+  } catch (error) {
+    console.error('Razorpay order creation error:', error);
+    res.status(500).json({ error: 'Failed to create order' });
+  }
+});
+
+router.post('/razorpay/verify', async (req: Request, res: Response) => {
+  try {
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      razorpay_payment_status
+    } = req.body;
+
+    // Verify the payment signature
+    const razorpayInstance = await getRazorpayInstance();
+    const generated_signature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
+      .update(razorpay_order_id + '|' + razorpay_payment_id)
+      .digest('hex');
+
+    if (generated_signature === razorpay_signature) {
+      // Payment is verified
+      if (razorpay_payment_status === 'paid') {
+        // Update user credits in your database
+        // await addUserCredits(userId, creditsToAdd);
+
+        res.json({
+          success: true,
+          message: 'Payment verified successfully'
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          message: 'Payment not completed'
+        });
+      }
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid payment signature'
+      });
+    }
+  } catch (error) {
+    console.error('Payment verification error:', error);
+    res.status(500).json({ error: 'Payment verification failed' });
+  }
+});
+
 export default router;
