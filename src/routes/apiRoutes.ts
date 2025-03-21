@@ -203,14 +203,14 @@ router.post('/user/getgeneratedimages', async (req: Request, res: Response) => {
 
 router.post('/razorpay/create-order', async (req: Request, res: Response) => {
   try {
-    const { amount, plan } = req.body;
+    const { amount, plan, currency } = req.body;
     const razorpayInstance = await getRazorpayInstance();
 
     // Define plan-specific amounts in paise
     const planAmounts: { [key: string]: number } = {
-      'Plus': 128000,    // ₹16
-      'Max': 2176000,     // ₹27
-      'Pro': 280000      // ₹35
+      'Plus': currency === "USD" ? 16 : 128000,    // $16
+      'Max': currency === "USD" ? 27 : 2176000,     // $27
+      'Pro': currency === "USD" ? 35 : 280000      // $35
     };
 
     // Get the amount based on the plan, or use the provided amount
@@ -218,7 +218,7 @@ router.post('/razorpay/create-order', async (req: Request, res: Response) => {
 
     const options = {
       amount: orderAmount,
-      currency: "INR",
+      currency: currency,
       receipt: `receipt_${Date.now()}`,
       notes: {
         plan: plan,
