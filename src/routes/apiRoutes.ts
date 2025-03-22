@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, RequestHandler } from "express";
 import { generateScript } from "../services/script";
 import { generateDescription } from "../services/description";
 import { authMiddleware } from "../middleware/auth";
@@ -13,7 +13,7 @@ import {
 } from "../services/thumbnail/genpersonimage";
 
 import dotenv from "dotenv";
-import { checkUserExists, createNewUser, getUserGeneratedImages } from "../db/functions";
+import { addUserCredits, checkUserExists, createNewUser, getUserGeneratedImages } from "../db/functions";
 import { getRazorpayInstance } from "../services/razorpay/razorpay";
 
 const router = Router();
@@ -208,9 +208,9 @@ router.post('/razorpay/create-order', async (req: Request, res: Response) => {
 
     // Define plan-specific amounts in paise
     const planAmounts: { [key: string]: number } = {
-      'Plus': currency === "USD" ? 16 : 128000,    // $16
-      'Max': currency === "USD" ? 27 : 2176000,     // $27
-      'Pro': currency === "USD" ? 35 : 280000      // $35
+      'Plus': currency === "USD" ? 1600 : 128000,    // $16
+      'Max': currency === "USD" ? 2700 : 2176000,     // $27
+      'Pro': currency === "USD" ? 3500 : 280000      // $35
     };
 
     // Get the amount based on the plan, or use the provided amount
@@ -315,9 +315,65 @@ router.post('/razorpay/verify', async (req: Request, res: Response) => {
   }
 });
 
+router.post('/user/addcredits', (async (req, res) => {
+  const { userId, creditAmount } = req.body;
+
+  // Validate input
+  if (!userId || !creditAmount) {
+    return res.status(400).json({
+      success: false,
+      message: "userId and creditAmount are required"
+    });
+  }
+
+  // Validate creditAmount is a positive number
+  if (typeof creditAmount !== 'number' || creditAmount <= 0) {
+    return res.status(400).json({
+      success: false,
+      message: "creditAmount must be a positive number"
+    });
+  }
+  // BUG:
+  //update user credits to db only after payment is complete(read docs)
+
+  try {
+    const updatedCreds = await addUserCredits(userId, creditAmount);
+    res.json({
+      success: true,
+      message: "Credits added successfully",
+      credits: updatedCreds
+    });
+  } catch (error) {
+    console.error('Error adding credits:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const statusCode = errorMessage === 'User not found' ? 404 : 500;
+
+    res.status(statusCode).json({
+      success: false,
+      message: "Failed to add credits to db",
+      error: errorMessage
+    });
+  }
+}) as RequestHandler);
+
 //TODO:
 // 1) ISSUE INVOICES TO CUSTOMERS
 // https://razorpay.com/docs/api/payments/invoices/#issue-an-invoice/
+
+router.post('/razorpay/ordersapi', (async (req, res) => {
+  const razorpayInstance = await getRazorpayInstance();
+  const { amount, currency, receipt } = req.body;
+
+  const options = {
+    amount: amount,  // Amount is in currency subunits. Default currency is INR. Hence, 50000 refers to 50000 paise
+    currency: currency,
+    receipt: receipt
+  };
+
+  razorpayInstance.orders.create(options, function (err, order) {
+    console.log(order);
+  })
+}))
 
 
 export default router;
