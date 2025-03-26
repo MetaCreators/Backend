@@ -1,22 +1,34 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../db";
-import { generatedImages, models, trainingImages, UserTable, creditTransactions } from "../schema";
+import {
+  generatedImages,
+  models,
+  trainingImages,
+  UserTable,
+  creditTransactions,
+} from "../schema";
 import "dotenv/config";
 
 // create new user upon signup => example usage: createNewUser("yash9","yash9@gmail.com")
 
 export async function createNewUser(name: string, email: string) {
   try {
-    const existingUser = await db.select().from(UserTable).where(eq(UserTable.email, email));
+    const existingUser = await db
+      .select()
+      .from(UserTable)
+      .where(eq(UserTable.email, email));
     if (existingUser.length > 0) {
       throw new Error("User with this email already exists");
     }
-    const newUser = await db.insert(UserTable).values({
-      name: name,
-      email: email
-    }).returning({
-      id: UserTable.id
-    });
+    const newUser = await db
+      .insert(UserTable)
+      .values({
+        name: name,
+        email: email,
+      })
+      .returning({
+        id: UserTable.id,
+      });
     console.log(newUser);
     return newUser;
   } catch (error) {
@@ -33,7 +45,10 @@ async function getAllUsers() {
 }
 
 export async function checkUserExists(email: string) {
-  const user = await db.select().from(UserTable).where(eq(UserTable.email, email));
+  const user = await db
+    .select()
+    .from(UserTable)
+    .where(eq(UserTable.email, email));
   return user.length > 0;
 }
 
@@ -157,8 +172,8 @@ export async function getUserGeneratedImages(userId: string, modelId: string) {
     where: and(
       eq(generatedImages.userId, userId),
       eq(generatedImages.modelId, modelId)
-    )
-  })
+    ),
+  });
   console.log(user);
   return user;
 }
@@ -170,7 +185,10 @@ export async function addUserCredits(userId: string, creditAmount: number) {
   }
 
   // First check if user exists
-  const user = await db.select().from(UserTable).where(eq(UserTable.id, userId));
+  const user = await db
+    .select()
+    .from(UserTable)
+    .where(eq(UserTable.id, userId));
   if (user.length === 0) {
     throw new Error("User not found");
   }
@@ -178,10 +196,11 @@ export async function addUserCredits(userId: string, creditAmount: number) {
   const currentCredits = user[0].availableCreds;
 
   // Update credits
-  await db.update(UserTable)
+  await db
+    .update(UserTable)
     .set({
       availableCreds: currentCredits + creditAmount,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     })
     .where(eq(UserTable.id, userId));
 
@@ -189,7 +208,7 @@ export async function addUserCredits(userId: string, creditAmount: number) {
   await db.insert(creditTransactions).values({
     userId: userId,
     changeAmount: creditAmount,
-    reason: "topup"
+    reason: "topup",
   });
 
   return currentCredits + creditAmount;
@@ -215,11 +234,12 @@ export async function deductUserCredits(userId: string, deduction: number) {
 //Example usage: deductUserCredits("01f90e3d-171d-4313-8985-f25ccd5cd915", 10);
 
 // get user credits
-async function getUserCredits(userId: string) {
+export async function getUserCredits(userId: string) {
   const user = await db
     .select()
     .from(UserTable)
     .where(eq(UserTable.id, userId));
+  console.log("Fetched user credit");
   console.log(user);
   return user.length > 0 ? user[0].availableCreds : null;
 }
