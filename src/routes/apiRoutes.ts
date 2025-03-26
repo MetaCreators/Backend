@@ -1,9 +1,10 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, RequestHandler } from "express";
 import { generateScript } from "../services/script";
 import { generateDescription } from "../services/description";
 import { authMiddleware } from "../middleware/auth";
 import { finetune } from "../services/thumbnail/finetune";
 import * as aws from "aws-sdk";
+import crypto from "crypto";
 
 import {
   GeminiService,
@@ -12,7 +13,9 @@ import {
 } from "../services/thumbnail/genpersonimage";
 
 import dotenv from "dotenv";
-import { checkUserExists, createNewUser, getUserGeneratedImages } from "../db/functions";
+import { addUserCredits, checkUserExists, createNewUser, getUserGeneratedImages } from "../db/functions";
+import { getRazorpayInstance } from "../services/razorpay/razorpay";
+import { validateWebhookSignature } from "razorpay/dist/utils/razorpay-utils";
 
 const router = Router();
 dotenv.config();
@@ -114,4 +117,112 @@ router.post('/user/getgeneratedimages', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to get user generated images' });
   }
 });
+
+router.post('/razorpay/create-order', async (req: Request, res: Response) => {
+  try {
+    const { amount, plan, currency } = req.body;
+    const razorpayInstance = await getRazorpayInstance();
+
+    // Define plan-specific amounts in paise
+    const planAmounts: { [key: string]: number } = {
+      'Plus': currency === "USD" ? 1600 : 128000,    // $16
+      'Max': currency === "USD" ? 2700 : 2176000,     // $27
+      'Pro': currency === "USD" ? 3500 : 280000      // $35
+    };
+
+    // Get the amount based on the plan, or use the provided amount
+    const orderAmount = planAmounts[plan] || amount;
+
+    const options = {
+      amount: orderAmount,
+      currency: currency,
+      receipt: `receipt_${Date.now()}`,
+      notes: {
+        plan: plan,
+        userId: req.body.userId // Add userId to track which user made the payment
+      }
+    };
+
+    const order = await razorpayInstance.orders.create(options);
+
+    res.json({
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      plan: plan
+    });
+  } catch (error) {
+    console.error('Razorpay order creation error:', error);
+    res.status(500).json({
+      error: 'Failed to create order',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+router.post('/verify-payment', (async (req, res) => {
+  const {
+    razorpay_order_id,
+    razorpay_payment_id,
+    razorpay_signature,
+    userId,
+    creditAmount
+  } = req.body;
+
+  if (!userId || !creditAmount) {
+    return res.status(400).json({
+      success: false,
+      message: "userId and creditAmount are required"
+    });
+  }
+
+  if (typeof creditAmount !== 'number' || creditAmount <= 0) {
+    return res.status(400).json({
+      success: false,
+      message: "creditAmount must be a positive number"
+    });
+  }
+
+  // Verify the payment signature
+  try {
+    const isValidSignature = validateWebhookSignature(razorpay_order_id + '|' + razorpay_payment_id, razorpay_signature, process.env.RAZORPAY_KEY_SECRET!);
+    if (isValidSignature) {
+
+      const updatedCreds = await addUserCredits(userId, creditAmount);
+      res.status(200).json({
+        success: true,
+        message: "Credits added successfully",
+        credits: updatedCreds,
+        status: 'ok'
+      });
+      //db operation here
+      console.log("Payment verification successful");
+    }
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ status: 'error', message: 'Error verifying payment' });
+  }
+}) as RequestHandler);
+
+//TODO:
+// 1) ISSUE INVOICES TO CUSTOMERS
+// https://razorpay.com/docs/api/payments/invoices/#issue-an-invoice/
+
+router.post('/razorpay/ordersapi', (async (req, res) => {
+  const razorpayInstance = await getRazorpayInstance();
+  const { amount, currency, receipt } = req.body;
+
+  const options = {
+    amount: amount,  // Amount is in currency subunits. Default currency is INR. Hence, 50000 refers to 50000 paise
+    currency: currency,
+    receipt: receipt
+  };
+
+  razorpayInstance.orders.create(options, function (err, order) {
+    console.log(order);
+  })
+}))
+
+
 export default router;
