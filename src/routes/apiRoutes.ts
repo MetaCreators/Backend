@@ -15,6 +15,7 @@ import {
 import dotenv from "dotenv";
 import { addUserCredits, checkUserExists, createNewUser, getUserGeneratedImages } from "../db/functions";
 import { getRazorpayInstance } from "../services/razorpay/razorpay";
+import { validateWebhookSignature } from "razorpay/dist/utils/razorpay-utils";
 
 const router = Router();
 dotenv.config();
@@ -117,90 +118,6 @@ router.post('/user/getgeneratedimages', async (req: Request, res: Response) => {
   }
 });
 
-// router.post('/payment', async (req: Request, res: Response) => {
-
-//   try {
-//     const razorpayInstance = await getRazorpayInstance();
-//     const options = {
-//       amount: 5000,
-//       currency: "INR",
-//       receipt: "receipt_order_7700000000000000000000",
-//     };
-//     const order = await razorpayInstance.orders.create(options);
-//     res.json({ order });
-//   } catch (error) {
-//     console.log(error);
-//     res.status(500).json({ error: 'Failed to create order' });
-//   }
-// });
-
-// router.post('/razorpay/create-order', async (req: Request, res: Response) => {
-//   try {
-//     const razorpayInstance = await getRazorpayInstance();
-//     const options = {
-//       amount: 100, // Amount in paise (₹500)
-//       currency: "INR",
-//       receipt: `receipt_${Date.now()}`,
-//       notes: {
-//         userId: req.body.userId // Add userId to track which user made the payment
-//       }
-//     };
-//     const order = await razorpayInstance.orders.create(options);
-//     res.json({
-//       orderId: order.id,
-//       amount: order.amount,
-//       currency: order.currency
-//     });
-//   } catch (error) {
-//     console.error('Razorpay order creation error:', error);
-//     res.status(500).json({ error: 'Failed to create order' });
-//   }
-// });
-
-// router.post('/razorpay/verify', async (req: Request, res: Response) => {
-//   try {
-//     const {
-//       razorpay_order_id,
-//       razorpay_payment_id,
-//       razorpay_signature,
-//       razorpay_payment_status
-//     } = req.body;
-
-//     // Verify the payment signature
-//     const razorpayInstance = await getRazorpayInstance();
-//     const generated_signature = crypto
-//       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
-//       .update(razorpay_order_id + '|' + razorpay_payment_id)
-//       .digest('hex');
-
-//     if (generated_signature === razorpay_signature) {
-//       // Payment is verified
-//       if (razorpay_payment_status === 'paid') {
-//         // Update user credits in your database
-//         // await addUserCredits(userId, creditsToAdd);
-
-//         res.json({
-//           success: true,
-//           message: 'Payment verified successfully'
-//         });
-//       } else {
-//         res.status(400).json({
-//           success: false,
-//           message: 'Payment not completed'
-//         });
-//       }
-//     } else {
-//       res.status(400).json({
-//         success: false,
-//         message: 'Invalid payment signature'
-//       });
-//     }
-//   } catch (error) {
-//     console.error('Payment verification error:', error);
-//     res.status(500).json({ error: 'Payment verification failed' });
-//   }
-// });
-
 router.post('/razorpay/create-order', async (req: Request, res: Response) => {
   try {
     const { amount, plan, currency } = req.body;
@@ -243,82 +160,15 @@ router.post('/razorpay/create-order', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/razorpay/verify', async (req: Request, res: Response) => {
-  try {
-    const {
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature,
-      razorpay_payment_status,
-      plan
-    } = req.body;
+router.post('/verify-payment', (async (req, res) => {
+  const {
+    razorpay_order_id,
+    razorpay_payment_id,
+    razorpay_signature,
+    userId,
+    creditAmount
+  } = req.body;
 
-    // Verify the payment signature
-    const razorpayInstance = await getRazorpayInstance();
-    const generated_signature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
-      .update(razorpay_order_id + '|' + razorpay_payment_id)
-      .digest('hex');
-
-    if (generated_signature === razorpay_signature) {
-      // Payment is verified
-      if (razorpay_payment_status === 'paid') {
-        // Define plan-specific credits/features
-        const planCredits: { [key: string]: any } = {
-          'Plus': {
-            aiGenerationMinutes: 50,
-            iStockCredits: 80,
-            storageGB: 100,
-            voiceClones: 2
-          },
-          'Max': {
-            aiGenerationMinutes: 200,
-            iStockCredits: 320,
-            storageGB: 400,
-            voiceClones: 5
-          },
-          'Pro': {
-            aiGenerationMinutes: 200,
-            iStockCredits: 320,
-            storageGB: 400,
-            voiceClones: 5
-          }
-        };
-
-        // Update user's subscription in your database
-        // await updateUserSubscription(userId, plan, planCredits[plan]);
-
-        res.json({
-          success: true,
-          message: 'Payment verified successfully',
-          plan: plan,
-          credits: planCredits[plan]
-        });
-      } else {
-        res.status(400).json({
-          success: false,
-          message: 'Payment not completed'
-        });
-      }
-    } else {
-      res.status(400).json({
-        success: false,
-        message: 'Invalid payment signature'
-      });
-    }
-  } catch (error) {
-    console.error('Payment verification error:', error);
-    res.status(500).json({
-      error: 'Payment verification failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-router.post('/user/addcredits', (async (req, res) => {
-  const { userId, creditAmount } = req.body;
-
-  // Validate input
   if (!userId || !creditAmount) {
     return res.status(400).json({
       success: false,
@@ -326,33 +176,32 @@ router.post('/user/addcredits', (async (req, res) => {
     });
   }
 
-  // Validate creditAmount is a positive number
   if (typeof creditAmount !== 'number' || creditAmount <= 0) {
     return res.status(400).json({
       success: false,
       message: "creditAmount must be a positive number"
     });
   }
-  // BUG:
-  //update user credits to db only after payment is complete(read docs)
 
+  // Verify the payment signature
   try {
-    const updatedCreds = await addUserCredits(userId, creditAmount);
-    res.json({
-      success: true,
-      message: "Credits added successfully",
-      credits: updatedCreds
-    });
-  } catch (error) {
-    console.error('Error adding credits:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const statusCode = errorMessage === 'User not found' ? 404 : 500;
+    const isValidSignature = validateWebhookSignature(razorpay_order_id + '|' + razorpay_payment_id, razorpay_signature, process.env.RAZORPAY_KEY_SECRET!);
+    if (isValidSignature) {
 
-    res.status(statusCode).json({
-      success: false,
-      message: "Failed to add credits to db",
-      error: errorMessage
-    });
+      const updatedCreds = await addUserCredits(userId, creditAmount);
+      res.status(200).json({
+        success: true,
+        message: "Credits added successfully",
+        credits: updatedCreds,
+        status: 'ok'
+      });
+      //db operation here
+      console.log("Payment verification successful");
+    }
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ status: 'error', message: 'Error verifying payment' });
   }
 }) as RequestHandler);
 
