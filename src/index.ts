@@ -6,47 +6,48 @@ import { authMiddleware } from "./middleware/auth";
 import { supabase } from "./lib/supabase";
 import { createClient } from "redis";
 import * as aws from "aws-sdk";
+import { getUserCredits } from "./db/functions";
 
 const client = createClient({
-    url: process.env.REDIS_URL
-});    
+  url: process.env.REDIS_URL,
+});
 
 try {
-    client.connect();
-    console.log("connected to redis");
+  client.connect();
+  console.log("connected to redis");
 } catch (error) {
-    console.log("error connecting to redis",error)
+  console.log("error connecting to redis", error);
 }
-
 
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
 const corsOptions = {
-  origin: function (origin:any, callback:any) {
+  origin: function (origin: any, callback: any) {
     const allowedOrigins = [
-      'https://lithouse.in',
-      'http://localhost:3000',
-      'http://localhost:5173'
+      "https://lithouse.in",
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "http://localhost:5174",
     ];
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error("Not allowed by CORS"));
     }
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
   preflightContinue: false,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 204,
 };
 
 const bucket = "lithouseuserimages";
 const digiendpoint = new aws.Endpoint("blr1.digitaloceanspaces.com");
 const s3Client = new aws.S3({
-    endpoint: digiendpoint,
-    accessKeyId: process.env.DIGIOCEAN_OBJECT_ACCESS_ID || "" ,
-    secretAccessKey: process.env.DIGIOCEAN_OBJECT_SECRET || "" 
+  endpoint: digiendpoint,
+  accessKeyId: process.env.DIGIOCEAN_OBJECT_ACCESS_ID || "",
+  secretAccessKey: process.env.DIGIOCEAN_OBJECT_SECRET || "",
 });
 
 //app.options('*', cors(corsOptions)); this is for production ?
@@ -123,15 +124,14 @@ app.post("/thumbnail", authMiddleware, async (req: Request, res: Response) => {
 
 //TODO:abstract out properly => put the code in respective folders
 
-
 app.post("/upload", async (req, res) => {
   //TODO:
   //3) save the DO url in db => once we get the url from DO and replicate, just store it in db
   //4)if folder already exists, store the image in the same, else create new => instead of checking this on spaces, we can just query
   // the db => check if there's a folder for the user => if yes then save in it else create a new
-  const imageUrl = req.body.imageUrl; 
+  const imageUrl = req.body.imageUrl;
   const key = `Image-${Date.now()}`;
- 
+
   //here we get a url where we can upload our images
   try {
     const response = await fetch(imageUrl);
@@ -141,7 +141,7 @@ app.post("/upload", async (req, res) => {
     const s3Params = {
       Bucket: bucket,
       Key: key,
-      ContentType: response.headers.get("content-type") || "image/jpeg"
+      ContentType: response.headers.get("content-type") || "image/jpeg",
     };
 
     const uploadUrl = await s3Client.getSignedUrlPromise("putObject", s3Params);
@@ -150,33 +150,39 @@ app.post("/upload", async (req, res) => {
       method: "PUT",
       body: blob,
       headers: {
-        "Content-Type": s3Params.ContentType
-      }
+        "Content-Type": s3Params.ContentType,
+      },
     });
     console.log(uploading);
 
     res.json({
       message: "Image uploaded successfully",
       url: uploadUrl,
-      key
+      key,
     });
   } catch (err) {
     console.error("Error uploading image:", err);
     res.status(500).json({ error: "Failed to upload image" });
   }
-})
+});
 
-app.get('/download', async (req, res) => {
+app.get("/download", async (req, res) => {
   const key = req.query.key;
   const s3Params = {
     Bucket: bucket,
-    Key: key
+    Key: key,
   };
   const getURL = await s3Client.getSignedUrlPromise("getObject", s3Params);
   console.log("download url is", getURL);
 
   res.json({ url: getURL });
-})
+});
+
+app.get("/api/user/:userId/credit", async (req, res) => {
+  const { userId } = req.params;
+  const userCredit = await getUserCredits(userId);
+  res.json({ credit: userCredit });
+});
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
