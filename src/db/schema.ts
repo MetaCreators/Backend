@@ -35,7 +35,7 @@ export const models = pgTable('models', {
     id: uuid("id").primaryKey().defaultRandom(),
     userId: uuid("user_id").references(() => UserTable.id).notNull(),
     replicateModelId: varchar("replicate_model_id", { length: 512 }).unique(),
-    status: ModelTrainingStatusEnum("trainingStatus"), //TODO: need to change this to accept  "canceled" || "processing" || "failed" || "starting" || "succeeded"
+    status: ModelTrainingStatusEnum("trainingStatus"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull()
 });

@@ -19,7 +19,7 @@ export async function finetune(req: any, res: any) {
     const response = await db.insert(trainingImages).values({
       userId: userId,
       cloudUrl: filename,
-      status: "success", //TODO: Better handling of status => send status from frontend
+      status: "success", //TODO: Better handling of status => send status from frontend whether image save to DO was successful or not
     });
     console.log(
       "filename save status for userid",

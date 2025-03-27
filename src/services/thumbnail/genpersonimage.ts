@@ -91,7 +91,6 @@ export class ReplicateService {
     this.outputDir = outputDir;
   }
 
-  //TODO: FIX THE OUTPUT OF generateImage TO RETURN BOTH PREDICTION ID AND PREDICTION URL, AND THEN SEND THE ID TO storeGeneratedImage
   async generateImage(prompt: string): Promise<GenerateImageProps> {
     try {
       const input = {
@@ -187,40 +186,12 @@ export class ImageController {
       );
       const uploadedUrls: string[] = [];
       const imageId = imageUrls.predictionId;
-      //TODO: FIX THE STRUCTURE OF imageUrls => IT CONTAINS MULTIPLE URLS AND THEIR ID
-      //TODO:  FOR NOW WE GENERATE ONLY A SINGLE IMAGE SO THIS METHOD WORKS AS IT IS, LATER WE SHOULD MODIFY IT
       for (const imageUrl of imageUrls.outputUrl) {
-        //I SHOULD GET BOTH imageUrl.outputUrl AND imageUrl.
         try {
           const key = `${userId}/generatedImages/${Date.now()}.webp`;
           const response = await fetch(imageUrl);
           const arrayBuffer = await response.arrayBuffer();
           const blob = Buffer.from(arrayBuffer);
-
-          // const s3Params = {
-          //   Bucket: bucket,
-          //   Key: key,
-          //   ContentType: "image/webp",
-          //   ACL: 'public-read'
-          // };
-
-          // const uploadUrl = await s3Client.getSignedUrlPromise("putObject", s3Params);
-          // console.log("presigned URl is ", uploadUrl);
-          // const uploading = await fetch(uploadUrl, {
-          //   method: "PUT",
-          //   body: blob,
-          //   headers: {
-          //     "Content-Type": s3Params.ContentType
-          //   }
-          // });
-          // console.log("Image saving to DO status", uploading);
-
-          // const s3ParamsForGETURL = {
-          //   Bucket: bucket,
-          //   Key: key
-          // };
-
-          // const getURL = await s3Client.getSignedUrlPromise("getObject", s3ParamsForGETURL);
           await s3Client
             .putObject({
               Bucket: bucket,

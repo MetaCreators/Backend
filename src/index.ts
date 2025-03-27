@@ -8,21 +8,21 @@ import { createClient } from "redis";
 import * as aws from "aws-sdk";
 
 const client = createClient({
-    url: process.env.REDIS_URL
-});    
+  url: process.env.REDIS_URL
+});
 
 try {
-    client.connect();
-    console.log("connected to redis");
+  client.connect();
+  console.log("connected to redis");
 } catch (error) {
-    console.log("error connecting to redis",error)
+  console.log("error connecting to redis", error)
 }
 
 
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
 const corsOptions = {
-  origin: function (origin:any, callback:any) {
+  origin: function (origin: any, callback: any) {
     const allowedOrigins = [
       'https://lithouse.in',
       'http://localhost:3000',
@@ -44,9 +44,9 @@ const corsOptions = {
 const bucket = "lithouseuserimages";
 const digiendpoint = new aws.Endpoint("blr1.digitaloceanspaces.com");
 const s3Client = new aws.S3({
-    endpoint: digiendpoint,
-    accessKeyId: process.env.DIGIOCEAN_OBJECT_ACCESS_ID || "" ,
-    secretAccessKey: process.env.DIGIOCEAN_OBJECT_SECRET || "" 
+  endpoint: digiendpoint,
+  accessKeyId: process.env.DIGIOCEAN_OBJECT_ACCESS_ID || "",
+  secretAccessKey: process.env.DIGIOCEAN_OBJECT_SECRET || ""
 });
 
 //app.options('*', cors(corsOptions)); this is for production ?
@@ -104,7 +104,6 @@ app.post("/thumbnail", authMiddleware, async (req: Request, res: Response) => {
 
     const result = await generateImage(userIdea, userStyle, targetAudience);
     const images = Array.isArray(result) ? result : [result];
-    // TODO: AI logic here: Respond with 3 image URLs
 
     res.json({
       success: true,
@@ -126,12 +125,11 @@ app.post("/thumbnail", authMiddleware, async (req: Request, res: Response) => {
 
 app.post("/upload", async (req, res) => {
   //TODO:
-  //3) save the DO url in db => once we get the url from DO and replicate, just store it in db
   //4)if folder already exists, store the image in the same, else create new => instead of checking this on spaces, we can just query
   // the db => check if there's a folder for the user => if yes then save in it else create a new
-  const imageUrl = req.body.imageUrl; 
+  const imageUrl = req.body.imageUrl;
   const key = `Image-${Date.now()}`;
- 
+
   //here we get a url where we can upload our images
   try {
     const response = await fetch(imageUrl);
